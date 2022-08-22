@@ -1,0 +1,21 @@
+stages:
+  train-clf:
+    cmd: python train-tsfresh-xgb-interp-clf.py
+    deps:
+      - data/train_data.csv
+    outs:
+      - models/xgb-ts-feat-clf-all-data-pipeline.joblib
+  train-reg:
+    cmd: python train-tsfresh-xgb-interp-reg.py
+    deps:
+      - data/train_data.csv
+    outs:
+      - models/xgb-ts-feat-reg-RCPE-RCPE-data-pipeline.joblib
+      - models/xgb-ts-feat-reg-RCPE-RCPE-RCPE-data-pipeline.joblib
+      - models/xgb-ts-feat-reg-RCPE-RCPE-RCPE-RCPE-data-pipeline.joblib
+      - models/xgb-ts-feat-reg-L-R-RCPE-data-pipeline.joblib
+      - models/xgb-ts-feat-reg-L-R-RCPE-RCPE-data-pipeline.joblib
+      - models/xgb-ts-feat-reg-L-R-RCPE-RCPE-RCPE-data-pipeline.joblib
+      - models/xgb-ts-feat-reg-RC-RC-RCPE-RCPE-data-pipeline.joblib
+      - models/xgb-ts-feat-reg-Rs_Ws-data-pipeline.joblib
+      - models/xgb-ts-feat-reg-RC-G-G-data-pipeline.joblib
