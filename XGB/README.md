@@ -24,6 +24,7 @@ eis_preprocessing.py: Code to preprocess the .csv files with the spectra
 
 eis_tsfresh.xgb.py: Call this script to train or pred. 
 USAGE:
+```bash
 python eis_tsfresh_xgb.py -h
 usage: eis_tsfresh_xgb.py [-h] [--mode MODE] [--modelpath MODELPATH]
                           [--datapath DATAPATH] [--pred_data PRED_DATA]
@@ -46,7 +47,7 @@ optional arguments:
                         .csv file to use for making predictions. If no
                         argument is supplied, the script will look for
                         test_data.csv under datapath
-
+```
 
 
 OLD ReadME: 
