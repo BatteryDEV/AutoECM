@@ -4,11 +4,32 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
-
+import shap
 import umap
 
 
 def plot_cm(y_test, y_pred, le, save=0, save_path="", figname="test_confusion"):
+    """Plot confusion matrix
+    
+    Parameters
+    ----------
+    y_test: array-like
+        True labels
+    y_pred: array-like
+        Predicted labels
+    le: LabelEncoder
+        Label encoder
+    save: bool
+        Save figure
+    save_path: str
+        Path to save figure
+    figname: str
+        Name of figure
+
+    Returns
+    -------
+    None
+    """
     cm = confusion_matrix(y_test, y_pred)
     cm_df = pd.DataFrame(
         cm,
@@ -29,15 +50,24 @@ def plot_cm(y_test, y_pred, le, save=0, save_path="", figname="test_confusion"):
     plt.show()
     return 
 
-def shap_feature_analysis(ppl, X, le, save=0): 
+def shap_feature_analysis(mdl, x_transformed, le, save=0): 
     """Use SHAP to investigate feature importance and dependence on critical features for making predictions on the test set
-    ppl: pipelin
-    X: Data that shall be investigated
-    le: label encoder
+
+    Parameters
+    ----------
+    ppl: Pipeline
+        Pipeline with fitted model
+    X: array-like
+        Test data
+    le: LabelEncoder
+        Label encoder
+    save: bool
+        Save figure
+
+    Returns 
+    -------
+    None
     """
-    import shap
-    mdl = ppl['classifier']
-    x_transformed = ppl['augmenter'].transform(X)
     # SHAP objects
     explainer = shap.TreeExplainer(mdl)
     shap_values = explainer.shap_values(x_transformed)
@@ -78,7 +108,17 @@ def shap_feature_analysis(ppl, X, le, save=0):
     return 
 
 def plot_freq_range(df, save=0, verbose=1):
-    '''Show the frequency ranges for each circuit type (frequency range data leakage).'''
+    """Show the frequency ranges for each circuit type (frequency range data leakage).
+    
+    Parameters
+    ----------  
+    df: DataFrame
+        Dataframe with EIS data
+    save: bool  
+        Save figure
+    verbose: bool
+        Print frequency information    
+    """
 
     circuits, indices = np.unique(df.Circuit, return_index=True)
     df_unique = df.iloc[indices]
@@ -104,7 +144,19 @@ def plot_freq_range(df, save=0, verbose=1):
     return
 
 def umap_plots(df_sorted, save=0):
-    '''Make a UMAP plot of the data set.'''
+    """Make a UMAP plot of the data set.
+    
+    Parameters
+    ----------
+    df_sorted: DataFrame
+        Dataframe with sorted EIS data
+    save: bool
+        Save figure
+
+    Returns 
+    -------
+    None
+    """
     # Just get the impedance values into a numpy array
     d_z = np.zeros((df_sorted.shape[0], 60))
     for i in df_sorted.index:

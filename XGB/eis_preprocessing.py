@@ -11,12 +11,16 @@ def eis_dataframe_from_csv(csv_path) -> pd.DataFrame:
     Args:
         csv_df_path (File-Like-Object): path to file of, or buffer of, EIS data in CSV format
 
-    Returns:
-        pd.DataFrame: Dataframe with two or three columns - each row represents an EIS spectrum
-            - freq      : short for frequency, column of real-number numpy arrays
-            - Z         : short for impedance, column of imaginary-number numpy arrays
-            - Circuit   : Equivalent Circuit Model labels assigned to the spectra (Optional)
-            - Parameters: Parameters of the Equivalent Circuit Models (Optional)
+    Return
+    ------
+    df : pandas.DataFrame
+        A dataframe with two to four columns - each row represents an EIS spectrum
+            - id: unique identifier for each measurement
+            - freq: frequency of measurement
+            - Z: short for impedance, column of imaginary-number numpy arrays
+            - zimag: imaginary part of impedance
+            - Circuit: Equivalent Circuit Model labels assigned to the spectra (Optional)
+            - Parameters: Parameters of the Equivalent Circuit Models (Optional) 
     """
     df = pd.read_csv(csv_path, index_col=0)
 
@@ -35,45 +39,41 @@ def eis_dataframe_from_csv(csv_path) -> pd.DataFrame:
 
     return df
 
-# It seems like this function is not needed anywhere
-# def process_batch_element(freq, impedance):
-#    x_real = np.real(impedance)
-#    x_imag = -np.imag(impedance)
-#    return np.concatenate((x_real, x_imag))
-# def process_batch_element(freq, impedance, interpolated_basis):
-#    x_real = np.real(impedance)
-#    x_imag = -np.imag(impedance)
-
-#    f_real = interp1d(freq, x_real)
-#    f_imag = interp1d(freq, x_imag)
-#    return np.concatenate((f_real(interpolated_basis), f_imag(interpolated_basis)))
-
 def process_batch_element_f(interpolated_basis):
     return interpolated_basis
 
-
 def process_batch_element_zreal(freq, Z, interpolated_basis):
+    """Interpolates the real part of the impedance onto a common frequency basis"""
     x = np.real(Z)
     f = interp1d(freq, x, fill_value="extrapolate")  # extrapolate to prevent errors
     return f(interpolated_basis)
 
-
 def process_batch_element_zimag(freq, Z, interpolated_basis):
+    """Interpolates the imaginary part of the impedance onto a common frequency basis"""
     x = np.imag(Z)
     f = interp1d(freq, x, fill_value="extrapolate")  # extrapolate to prevent errors
     return f(interpolated_basis)
 
+def parse_circuit_params_from_str(params_str: str):
+    """Split the parameters of the Equivalent Circuit Model into a dictionary"""
+    return {
+        item.split(":")[0].strip(): float(item.split(":")[1].strip())
+        for item in params_str.split(",")
+    }
+
 def process_batch_element_params(Parameters):
+    """Extracts the parameters of the Equivalent Circuit Model from the Parameters input"""
     Params = parse_circuit_params_from_str(Parameters)
     return np.array(list(Params.values()))
 
-
+# double of the function above 
 def process_batch_element_params_str(Parameters):
+    """Extracts the parameters of the Equivalent Circuit Model from the Parameters input"""
     Params = parse_circuit_params_from_str(Parameters)
     return np.array(list(Params.keys()))
 
-
 def unwrap_df(df):
+    """Unwraps the frequency column into separate rows for each frequency to use UMAP"""
     df2 = pd.DataFrame(columns=["id", "freq", "zreal", "zimag"])
     for i in np.arange(df.shape[0]):
         f, zreal, zimag = df[["f", "zreal", "zimag"]].loc[i]
@@ -84,14 +84,8 @@ def unwrap_df(df):
         df2 = df2.append(df_, ignore_index=True)
     return df2
 
-
-def parse_circuit_params_from_str(params_str: str):
-    return {
-        item.split(":")[0].strip(): float(item.split(":")[1].strip())
-        for item in params_str.split(",")
-    }
-
 def preprocess_data(file_name):
+    """Preprocesses the data from the CSV filename into a dataframe"""
     ## Load Training Data
     df = eis_dataframe_from_csv(file_name)
 

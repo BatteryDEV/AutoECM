@@ -35,7 +35,7 @@ def create_pipeline_clf(df_ts):
                     default_fc_parameters=ComprehensiveFCParameters(),
                 ),
             ),
-            ("classifier", xgb.XGBClassifier(random_state=42)),
+            ("classifier", xgb.XGBClassifier(random_state=42, n_jobs=-1)),
         ]
     )
     pipe.set_params(augmenter__timeseries_container=df_ts);
