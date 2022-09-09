@@ -25,6 +25,10 @@
 # Mac users
 .DS_Store
 
+# Project specific large files
+XGB/data/umap_test.csv
+XGB/data/umap_train.csv
+
 # User-specific stuff
 .idea/**/workspace.xml
 .idea/**/tasks.xml
