@@ -26,8 +26,11 @@
 .DS_Store
 
 # Project specific large files
-XGB/data/umap_test.csv
-XGB/data/umap_train.csv
+data/umap_test.csv
+data/umap_testou.csv
+data/umap_train.csv
+data/umap_trainou.csv
+
 
 # User-specific stuff
 .idea/**/workspace.xml
