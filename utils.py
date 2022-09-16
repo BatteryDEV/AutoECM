@@ -8,12 +8,12 @@ import shap
 import umap
 
 
-def plot_cm(y_test, y_pred, le, save=0, save_path="", figname="test_confusion"):
+def plot_cm(y_true, y_pred, le, save=0, save_path="", title=None, figname="test_confusion"):
     """Plot confusion matrix
     
     Parameters
     ----------
-    y_test: array-like
+    y_true: array-like
         True labels
     y_pred: array-like
         Predicted labels
@@ -30,7 +30,7 @@ def plot_cm(y_test, y_pred, le, save=0, save_path="", figname="test_confusion"):
     -------
     None
     """
-    cm = confusion_matrix(y_test, y_pred)
+    cm = confusion_matrix(y_true, y_pred)
     cm_df = pd.DataFrame(
         cm,
         index = le.inverse_transform(list(range(9))), 
@@ -40,7 +40,10 @@ def plot_cm(y_test, y_pred, le, save=0, save_path="", figname="test_confusion"):
     #Plotting the confusion matrix
     plt.figure(figsize=(10,8))
     sns.heatmap(cm_df, annot=True)
-    plt.title('Confusion Matrix')
+    if title:
+        plt.title(title)
+    else:
+        plt.title('Confusion Matrix')
     plt.ylabel('Given ECM')
     plt.xlabel('Predicted ECM')
     plt.tight_layout()

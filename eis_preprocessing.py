@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
+import json 
+from sklearn.preprocessing import LabelEncoder
 
 
 def eis_dataframe_from_csv(csv_path) -> pd.DataFrame:
@@ -186,3 +188,15 @@ def plot_all_spectra(df_sorted, fig=None, ax=None, plot_real=True, save=0, color
         return fig, ax
     else:
         plt.show()
+
+def eis_label_encoder(le_f = 'models/labels.json'):
+    # Load label encoder
+    with open(le_f, 'r') as f:
+        mapping = json.load(f)
+        le = LabelEncoder()
+
+    nb_classes = len(mapping.keys())
+    mapping['classes'] = [mapping[str(int(i))] for i in range(nb_classes)]
+    le.classes_ = np.array(mapping['classes'])
+
+    return le, mapping

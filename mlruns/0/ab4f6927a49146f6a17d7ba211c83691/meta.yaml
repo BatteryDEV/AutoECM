@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/joachim/Documents/PhD/PhD_Material/02Research/Papers/04EIS_Data_QS_BatteryDEV/Code/EIS-QS-ML/mlruns/0/ab4f6927a49146f6a17d7ba211c83691/artifacts
+end_time: 1663201379345
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+name: ''
+run_id: ab4f6927a49146f6a17d7ba211c83691
+run_uuid: ab4f6927a49146f6a17d7ba211c83691
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1663201367413
+status: 4
+tags: []
+user_id: joachim
