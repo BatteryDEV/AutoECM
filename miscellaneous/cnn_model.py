@@ -10,8 +10,8 @@ import uuid
 import tensorflow as tf
 from tensorflow import keras
 
-from cnn_architectures import baseline_cnn_model
-from cnn_architectures import transferlearn_cnn_model
+from miscellaneous.cnn_architectures import baseline_cnn_model
+from miscellaneous.cnn_architectures import transferlearn_cnn_model
 from eis_preprocessing import preprocess_data
 from eis_preprocessing import eis_label_encoder
 
