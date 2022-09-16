@@ -38,7 +38,7 @@ data/umap_trainou.csv
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
-miscellaneous/
+miscellaneous/*
 
 # AWS User-specific
 .idea/**/aws.xml
