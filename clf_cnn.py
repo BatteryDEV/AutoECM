@@ -6,7 +6,7 @@
 
 import pandas as pd
 import numpy as np
-
+import matplotlib.pyplot as plt
 import datetime
 import os
 
@@ -97,11 +97,11 @@ def train_model(model, train_ds, val_ds, adaptive_based_on_val):
         h = model.fit(train_ds, validation_data=val_ds, epochs=200, callbacks=[rp, es])
         # Do 5 epochs with a very low learning rate
         # Can be omitted if the model is already well converged
-        model.compile(loss="categorical_crossentropy", optimizer=keras.optimizers.Adam(learning_rate=1e-5), metrics=["accuracy"])
-        model = model.fit(val_ds, epochs=5)
+        # model.compile(loss="categorical_crossentropy", optimizer=keras.optimizers.Adam(learning_rate=1e-5), metrics=["accuracy"])
+        # h = model.fit(val_ds, epochs=5)
     else:
-        model = model.fit(train_ds, epochs=140)
-    return model
+        h = model.fit(train_ds, epochs=140)
+    return h, model
 
 def main(input_shape, nb_classes=9, output_dir="", adaptive_based_on_val=True):
     if adaptive_based_on_val:
@@ -149,22 +149,27 @@ def main(input_shape, nb_classes=9, output_dir="", adaptive_based_on_val=True):
         shuffle=False,
         color_mode="grayscale",
     )
+    y_train = []
     for image_batch, labels_batch in train_ds:
-        y_train = np.array(labels_batch)
+        y_train.append(labels_batch)
+    y_train = np.concatenate(y_train, axis=0)
+
     for image_batch, labels_batch in test_ds:
         y_test = np.array(labels_batch)
 
     # Build model
     model = cnn_architecture(input_shape, nb_classes, adaptive_based_on_val=adaptive_based_on_val)
     # Train model
-    model = train_model(model, train_ds, val_ds, adaptive_based_on_val=adaptive_based_on_val)
+    h, model = train_model(model, train_ds, val_ds, adaptive_based_on_val=adaptive_based_on_val)
 
     y_test_pred = model.predict(test_ds) # Predict class probabilities as 2 => [0.1, 0, 0.9, 0, 0, 0, 0, 0, 0, 0]
     Y_test_pred = np.argmax(y_test_pred, 1) # Decode Predicted labels
     y_train_pred = model.predict(train_ds) # Predict class probabilities as 2 => [0.1, 0, 0.9, 0, 0, 0, 0, 0, 0, 0]
     Y_train_pred = np.argmax(y_train_pred, 1) # Decode Predicted labels
-    # Y_test_true = np.argmax(y_test, 1) # Decode Predicted labels
-    f1_score(y_test, Y_test_pred, average='macro')
+    Y_test = np.argmax(y_test, 1) # Decode Predicted labels
+    Y_train = np.argmax(y_train, 1) # Decode Predicted labels
+    f1_score(Y_test, Y_test_pred, average='macro')
+    f1_score(Y_train, Y_train_pred, average='macro')
 
     with open('data/le_name_mapping.json', 'r') as f:
         mapping = json.load(f)
@@ -172,20 +177,22 @@ def main(input_shape, nb_classes=9, output_dir="", adaptive_based_on_val=True):
     mapping['classes'] = [mapping[str(int(i))] for i in range(9)]
     le.classes_ = np.array(mapping['classes'])
 
-    plot_cm(y_test, Y_test_pred, le, save=0, title='Confusion Matrix: CNN Model', figname='cnn_cm', save_path='figures/CNN/')
-
-    proportion_correct = f1_score(y_test, Y_test_pred, average='macro')
+    plot_cm(Y_test, Y_test_pred, le, save=1, figname=f'{output_dir}/cm_test')
+    plot_cm(Y_train, Y_train, le, save=1,figname=f'{output_dir}/cm_train')
+    proportion_correct = f1_score(Y_test, Y_test_pred, average='macro')
     print('Test Accuracy: {}'.format(proportion_correct))
 
     # Save model and weights
     model.save(f'{output_dir}/cnn_model.h5')
 
     # Calculate f1 and save classification report
-    calcualte_classification_report(y_train, y_train_pred, y_test, Y_test_pred, le, save=1, output_dir=output_dir)
-
+    calcualte_classification_report(Y_train, Y_train_pred, Y_test, Y_test_pred, le, save=1, output_dir=output_dir)
+    print("Done")
+    plt.close('all')
     return train_ds, val_ds
 
 if __name__ == "__main__":
+    tf.random.set_seed(20)
     input_shape = (58, 58)
     nb_classes = 9
     adaptive_based_on_val = True  
