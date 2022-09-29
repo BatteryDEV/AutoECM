@@ -146,7 +146,7 @@ def plot_freq_range(df, save=0, verbose=1):
         print(f'Maximal minimum freq: {f_min}, minimal maximum freq: {f_max}')
     return
 
-def umap_plots(df_sorted, save=0):
+def umap_plots(df_sorted, save=0, random_state=42):
     """Make a UMAP plot of the data set.
     
     Parameters
@@ -167,7 +167,7 @@ def umap_plots(df_sorted, save=0):
         d_z[i,:] = np.concatenate((d["zreal"], d["zimag"]))
 
     # UMAP transform
-    reducer = umap.UMAP(n_neighbors=20, min_dist=0.01, random_state=42)
+    reducer = umap.UMAP(n_neighbors=20, min_dist=0.01, random_state=random_state)
     embeds = reducer.fit_transform(d_z)
 
     ax = sns.scatterplot(x=embeds[:,0], y=embeds[:,1], hue=df_sorted.Circuit, palette="cividis")
@@ -203,3 +203,5 @@ def umap_plots(df_sorted, save=0):
         plt.savefig("figures/umap_separated.jpg", dpi=300)
     plt.show()
     return
+
+
