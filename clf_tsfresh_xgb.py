@@ -1,207 +1,116 @@
-import json
 import numpy as np
 import pandas as pd
-from joblib import dump
-from joblib import load
-import argparse
-
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder
-from sklearn.multioutput import MultiOutputRegressor
-from sklearn.compose import TransformedTargetRegressor
-from sklearn.preprocessing import QuantileTransformer
+import json
+import joblib
+import matplotlib.pyplot as plt
 
 import xgboost as xgb
 
-from tsfresh.transformers import RelevantFeatureAugmenter
-from tsfresh.transformers import FeatureAugmenter
-from tsfresh.feature_extraction import ComprehensiveFCParameters
+from sklearn.preprocessing import LabelEncoder
 
-from utils_preprocessing import preprocess_data
-#from eis_preprocessing import process_batch_element_params_str 
-#from eis_preprocessing import process_batch_element_params
-#from eis_preprocessing import unwrap_df
+import datetime
+import os
+from utils import shap_feature_analysis, plot_cm, calcualte_classification_report
+plt.ion()
 
 
-def create_pipeline_clf(df_ts):
-    ## Define sklearn pipeline
-    pipe = Pipeline(
-        [
-            (
-                "augmenter",
-                RelevantFeatureAugmenter(
-                    column_id="id",
-                     column_sort="freq",
-                    default_fc_parameters=ComprehensiveFCParameters(),
-                ),
-            ),
-            ("classifier", xgb.XGBClassifier(random_state=42, n_jobs=-1)),
-        ]
-    )
-    pipe.set_params(augmenter__timeseries_container=df_ts);
-    return pipe
+def load_features_le(train_data_f, test_data_f, le_f):
+    """Load precomputed features and label encoder
 
-def create_pipeline_reg(df_ts):
-    ## Define sklearn pipeline
-    mdl = MultiOutputRegressor(estimator=xgb.XGBRegressor())
-    regr = TransformedTargetRegressor(
-        regressor=mdl,
-        transformer=QuantileTransformer(n_quantiles=10, random_state=42)
-    )
-    pipe = Pipeline(
-        [
-            (
-                "augmenter",
-                FeatureAugmenter(
-                    column_id="id",
-                    column_sort="freq",
-                    default_fc_parameters=ComprehensiveFCParameters(),
-                ),
-            ),
-            ("regressor", regr),
-        ]
-    )
-    pipe.set_params(augmenter__timeseries_container=df_ts_)
-    return pipe
+    Parameters
+    ----------
+    train_data_f: str
+        Path to train data
+    test_data_f: str
+        Path to test data
+    lef: str
+        Path to label encoder
 
-def write_param_str_factory(param_strs):
-    def write_param_str(param_values):
-        return ", ".join([f"{key}: {value}" for key, value in zip(param_strs, param_values)])
-    return write_param_str
+    Returns
+    -------
+    X_train: array-like
+        Train data
+    y_train: array-like
+        Train labels
+    X_test: array-like
+        Test data
+    y_test: array-like
+        Test labels
+    le: LabelEncoder
+        Label encoder
+    """
 
+    # Load precomputed features
+    train_data = np.loadtxt(train_data_f, delimiter=",")
+    test_data = np.loadtxt(test_data_f, delimiter=",")
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="EIS spectra processing with ML")
-    parser.add_argument(
-        "--mode", 
-        help="Only 'train', 'pred' or 'all' are valid inputs. You need to train the model beofre calling prediction\
-            if you pass no argument, the cleassifier and the predictor will be trained and predicitons will be made")
-    parser.add_argument(
-        "--model_type",
-        help="3 options implemented: 'rf' for random forest, 'xgb' for xgboost, 'cnn' for convolutional neural network")
-    
-    args = parser.parse_args()
+    # Preprocess data
+    X_train = train_data[:,0:-1]
+    y_train= train_data[:,-1].reshape(-1,1).ravel()
+    X_test = test_data[:,0:-1]
+    y_test = test_data[:,-1].reshape(-1,1).ravel()
 
-    if args.mode:
-        mode = args.mode
-    else: 
-        mode = "train_clf"
-
-    if args.model_type:
-        m_path = args.modelpath
-     
-    m_path = "models/xgb/"    
-    d_path = "data/"
-    
-    pred_dfile = d_path + args.pred_data 
-    pred_dfile =d_path + 'test_data.csv'
-
-    print("Loading data...")
-    
-    
-    if  mode=="train_clf" or  mode=="train_reg":
-        df = preprocess_data(d_path + "train_data.csv")
-    elif mode=="pred":
-        df = preprocess_data(pred_dfile)
-
-
-
-    if mode=="train_clf":
-        ## Unwrap data frame for tsfresh
-        df_ts = unwrap_df(df)
-        df_x = pd.DataFrame(index=np.unique(df_ts["id"]))
-
-        ## Encode circuit labels as strings
+    # Load label encoder
+    with open(le_f, 'r') as f:
+        mapping = json.load(f)
         le = LabelEncoder()
-        df_y = pd.Series(data=(le.fit_transform(df["Circuit"])), index=np.unique(df_ts["id"]))
 
-        print("Starting class. feature extraction and training pipeline")
-        pipe = create_pipeline_clf(df_ts)
-        ## Evaluate features and fit XGBoost Model
-        pipe.fit(df_x, df_y)
+    nb_classes = len(mapping.keys())
+    mapping['classes'] = [mapping[str(int(i))] for i in range(nb_classes)]
+    le.classes_ = np.array(mapping['classes'])
+    return X_train, y_train, X_test, y_test, le 
 
-        print("trainign completed, writing model and predictions to disc")
-        dump(pipe, f"{m_path}clf/xgb-ts-feat-clf-all-data-pipeline.joblib")
+def main(train_data_f, test_data_f, output_dir, save_model, save): 
+    """XGB Classifier, based on precomputed features"""
 
-        label_dict = dict(zip(list(range(9)), le.inverse_transform(list(range(9)))))
+    le_f = "data/le_name_mapping.json"
+    X_train, y_train, X_test, y_test, le = load_features_le(train_data_f, test_data_f, le_f)
 
-        with open(f"{m_path}labels.json", "w") as outfile:
-            json.dump(label_dict, outfile)
+    # Create XGBoost model
+    model = xgb.XGBClassifier(random_state=42, n_jobs=-1)
+    model.fit(X_train, y_train)
 
-    if mode=="train_reg": 
-        df["param_strs"] = df.apply(
-            lambda x: process_batch_element_params_str(x.Parameters), axis=1
-        )
-        df["param_values"] = df.apply(
-            lambda x: process_batch_element_params(x.Parameters), axis=1
-        )
+    # Make predictions for train data
+    y_train_pred = model.predict(X_train)
+    plot_cm(y_train, y_train_pred, le, save=save, figname=f'{output_dir}/train_confusion')
 
-        ## Unwrap data frame for tsfresh
-        df_ts = unwrap_df(df)
+    # Make predictions for test data
+    y_test_pred = model.predict(X_test)
+    plot_cm(y_test, y_test_pred, le, save=save, figname=f'{output_dir}/test_confusion')
 
-        for ecm in df["Circuit"].unique():
-            print(f"Fitting regression for {ecm}")
+    # Save XGB model to joblib
+    if save_model:
+        joblib.dump(model, f"{output_dir}/model.joblib")
 
-            ## Subselect circuits of given ECM
-            df_ecm = df[df["Circuit"] == ecm]
-            df_ts_ = df_ts[df_ts["id"].isin(df_ecm.index)]
-
-            df_x = pd.DataFrame(index=np.unique(df_ts_["id"]))
-            df_y = pd.DataFrame(
-                df_ecm["param_values"].to_list(),
-                columns=df_ecm["param_strs"].loc[df_ecm.index[0]]
-            )
-
-            print("Starting regr. feature extraction and training pipeline")
-            pipe = create_pipeline_reg(df_ts)
-            ## Evaluate features and fit XGBoost Model
-            pipe.fit(df_x, df_y)
-
-            print("trainign completed, writing model and predictions to disc")
-            dump(pipe, f"{m_path}reg/xgb-ts-feat-reg-{ecm}-data-pipeline.joblib")
-
-            with open(f"{m_path}{ecm}_param-names.txt", "w") as f:
-                json.dump(df_ecm["param_strs"].loc[df_ecm.index[0]].tolist(), f)
+    # Load feature names from json file to list
+    with open('data/feature_names_tsfresh.json', 'r') as f:
+        feature_names = json.load(f)
     
-    if mode=="pred":
-        ## Unwrap data frame for tsfresh
-        df_ts = unwrap_df(df)
-        df_x = pd.DataFrame(index=np.unique(df_ts["id"]))
+    # Create df from X_test and feature names
+    df = pd.DataFrame(X_test, columns=feature_names)
+    shap_feature_analysis(model, df, le, max_display=12, save=save, output_dir=output_dir)
 
-        print("Load clf model")
-        clf_pipe = load(f"{m_path}clf/xgb-ts-feat-clf-all-data-pipeline.joblib")
-        
-        clf_pipe.set_params(augmenter__timeseries_container=df_ts)
-        with open(f"{m_path}labels.json", "r") as f:
-            label_dict = json.load(f)
+    # Calculate f1 and save classification report
+    calcualte_classification_report(y_train, y_train_pred, y_test, y_test_pred, le, save=save, output_dir=output_dir)
+    print("Done")
+    return
 
-        print("Predict class")
-        df["pred_label"] = clf_pipe.predict(df_x)
-        df["Circuit"] = df["pred_label"].apply(str).map(label_dict)
+if __name__ == '__main__':
+    remove_outlier = 1
 
-        df["Parameters"] = [""] * len(df)
+    now = datetime.datetime.now()
+    now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
+    output_dir = f"results/clf/xgb/{now_str}"
+    os.mkdir(output_dir)
 
-        for ecm in label_dict.values():
-            print(f"Predict model params for {ecm}")
-            reg_pipe = load(f"{m_path}reg/xgb-ts-feat-reg-{ecm}-data-pipeline.joblib")
+    if remove_outlier:
+        train_data_f = "data/train_tsfresh_ourem.csv"
+        test_data_f = "data/test_tsfresh_ourem.csv"
+        # Save outlier removed variable as txt file
+        with open(f"{output_dir}/outlier_removed.txt", 'w') as f:
+            f.write("Outlier removed")
+    else:
+        train_data_f = "data/train_tsfresh.csv"
+        test_data_f = "data/test_tsfresh.csv"
 
-            with open(f"{m_path}{ecm}_param-names.txt", "r") as f:
-                param_strs = json.load(f)
-
-            df_ecm = df[df["Circuit"] == ecm]
-
-            if len(df_ecm) == 0:
-                continue
-
-            df_ts_ = df_ts[df_ts["id"].isin(df_ecm.index)]
-
-            df_x = pd.DataFrame(index=np.unique(df_ts_["id"]))
-
-            reg_pipe.set_params(augmenter__timeseries_container=df_ts)
-            pred_values = reg_pipe.predict(df_x)
-
-            f = write_param_str_factory(param_strs)
-
-            df.loc[df_ecm.index, "Parameters"] = [f(params) for params in pred_values]
-        print('Save predicrtions')
-        df[["Circuit", "Parameters"]].to_csv(m_path+"submission.csv")
+    main(train_data_f, test_data_f, output_dir, save_model=True, save=True)

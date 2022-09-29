@@ -3,12 +3,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import seaborn as sns
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score, classification_report
 import shap
 import umap
 
 
-def plot_cm(y_true, y_pred, le, save=0, save_path="", title=None, figname="test_confusion"):
+def plot_cm(y_true, y_pred, le, save=0, title=None, figname="test_confusion"):
     """Plot confusion matrix
     
     Parameters
@@ -48,12 +48,55 @@ def plot_cm(y_true, y_pred, le, save=0, save_path="", title=None, figname="test_
     plt.xlabel('Predicted ECM')
     plt.tight_layout()
     if save:
-        plt.savefig(save_path + figname + ".eps", dpi=300)
-        plt.savefig(save_path + figname + ".jpg", dpi=300)
+        plt.savefig(figname + ".eps", dpi=300)
+        plt.savefig(figname + ".jpg", dpi=300)
     plt.show()
     return 
 
-def shap_feature_analysis(mdl, x_transformed, le, save=0): 
+def calcualte_classification_report(y_train, y_train_pred, y_test, y_test_pred, le, save=0, output_dir=""):
+    """Calculate classification report for train and test data
+    
+    Parameters
+    ----------
+    y_train: array-like
+        True labels for train data
+    y_train_pred: array-like
+        Predicted labels for train data
+    y_test: array-like
+        True labels for test data
+    y_test_pred: array-like
+        Predicted labels for test data
+    le: LabelEncoder
+        Label encoder
+    save: bool
+        Save classification report and predictions
+    output_dir: str
+        Path to save classification report and predictions
+    
+    Returns
+    -------
+    None
+    """
+    acc_train = f1_score(y_train, y_train_pred, average='macro')
+    acc_test = f1_score(y_test, y_test_pred, average='macro')
+
+    print(f"F1 score train: {acc_train:.3f}")
+    print(f"F1 score test: {acc_test:.3f}")
+
+    # Make classifcation report
+    cl_report = classification_report(y_test, y_test_pred, target_names=le.classes_, digits=4)
+    print(cl_report)
+
+    if save:
+        # Save classfication report
+        with open(f"{output_dir}/rf_report.txt", 'w') as f:
+            f.write(cl_report)
+        # Save predcitions
+        np.savetxt(f"{output_dir}/rf_pred_test.txt", y_test_pred, fmt='%d')
+    
+    return
+
+def shap_feature_analysis(mdl, x_transformed, le, save=0, output_dir="", max_display=12): 
     """Use SHAP to investigate feature importance and dependence on critical features for making predictions on the test set
 
     Parameters
@@ -77,14 +120,14 @@ def shap_feature_analysis(mdl, x_transformed, le, save=0):
 
     shap.summary_plot(shap_values, x_transformed, 
                   plot_size=(20,5), 
-                  max_display=10, 
+                  max_display=max_display, 
                   class_names=le.classes_, 
                   class_inds="original", 
-                  show=False)
-    #shap.summary_plot(shap_values, x_transformed, plot_size=(20,5), max_display=10)
+                  show=True)
+
     if save: 
-        plt.savefig("figures/shap_summary_bar.eps", dpi=300)
-        plt.savefig("figures/shap_summary_bar.jpg", dpi=300)
+        plt.savefig(f"{output_dir}/shap_summary_bar.eps", dpi=300)
+        plt.savefig(f"{output_dir}/shap_summary_bar.jpg", dpi=300)
 
     vals = np.abs(shap_values).mean(0)
     feature_importance = pd.DataFrame(list(zip(x_transformed.columns,sum(vals))),columns=['col_name','feature_importance_vals'])
@@ -106,8 +149,9 @@ def shap_feature_analysis(mdl, x_transformed, le, save=0):
     plt.gcf().set_size_inches(10, 8)
     plt.tight_layout()
     if save: 
-        plt.savefig("figures/shap_class_specific.eps", dpi=300)
-        plt.savefig("figures/shap_class_specific.jpg", dpi=300)
+        plt.savefig(f"{output_dir}/shap_class_specific.eps", dpi=300)
+        plt.savefig(f"{output_dir}/shap_class_specific.jpg", dpi=300)
+    plt.show()
     return 
 
 def plot_freq_range(df, save=0, verbose=1):

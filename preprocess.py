@@ -17,7 +17,7 @@ def extract_umap(df, df_test,  output_path, if_exclude_outlier=False):
 
     if if_exclude_outlier:
         df, df_test = exclude_outlier(df, df_test)
-        output_path = output_path.replace(".csv", "ou.csv")
+        output_path = output_path.replace(".", "ou.")
 
     # Resulting dataframes do not have labels! They only contain the id, freq, z_real, z_imag columns!
     df_ts = unwrap_df(df)
@@ -51,7 +51,10 @@ def extract_umap(df, df_test,  output_path, if_exclude_outlier=False):
     print("Saving umap feature data...")
     np.savetxt(output_path, np.c_[np.array(X), np.array(df_y)], delimiter=',')
     np.savetxt(output_path.replace("train", "test"), np.c_[np.array(X_test), np.array(df_y_test)], delimiter=',')   
-    print("Done.")    
+    # Save the feature names as json 
+    with open(output_path.replace("train", "feature_names").replace('.csv', '.json'), 'w') as f:
+        json.dump(list(X.columns), f)
+        
     return
 
 def extract_raw_interpolated(df, df_test, output_path, le_path, if_exclude_outlier=False):
@@ -59,7 +62,7 @@ def extract_raw_interpolated(df, df_test, output_path, le_path, if_exclude_outli
 
     if if_exclude_outlier:
         df, df_test = exclude_outlier(df, df_test)
-        output_path = output_path.replace(".csv", "ou.csv")
+        output_path = output_path.replace(".csv", "_ourem.csv")
         
     # Creating labels y
     with open(le_path, 'r') as f:
@@ -156,9 +159,10 @@ if __name__ == "__main__":
     df_test = preprocess_data(test_data_fname)
     
     print("Preprocessing data...")
-    #extract_raw_interpolated(df, df_test, output_path_raw, le_path, if_exclude_outlier=False)
+    extract_raw_interpolated(df, df_test, output_path_raw, le_path, if_exclude_outlier=False)
     print("Preprocessing data UMAP...")
     extract_umap(df, df_test,  output_path_umap, if_exclude_outlier=False)
+    # extract_umap(df, df_test,  output_path_umap, if_exclude_outlier=True)
     print("Preprocessing data images...")
-    #transform_data_to_images(df, df_test, le_path, output_path_cnn, plot_spectra=True)
+    transform_data_to_images(df, df_test, le_path, output_path_cnn, plot_spectra=True)
     print("Done.")

@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import classification_report, f1_score
-from utils import plot_cm
+from utils import plot_cm, calcualte_classification_report
 import pickle
 import datetime
 import os
@@ -14,7 +14,7 @@ plt.ion()
 
 # TO DO: Implement simple CV procedure (5-fold) 
 # Hyperopt for hyperparameter optimization did not work well for this dataset.
-def baseline_model(train_data_f, test_data_file, output_dir, cv_cross_val=False, save_fig=False):
+def baseline_model(train_data_f, test_data_file, output_dir, cv_cross_val=False, save=False):
     """Baseline model for predicting ECM from EIS data
     Linear classifiers perform poorly on this dataset, so we use a RF classifier (non-linear)
     Hyperparameter optimization with hpsklearn, keeping it simple for the baseline model
@@ -28,7 +28,7 @@ def baseline_model(train_data_f, test_data_file, output_dir, cv_cross_val=False,
         Path to output directory
     cv_cross_val : bool
         Perform cross validation
-    save_fig : bool
+    save : bool
         Save figures
         
     Returns
@@ -93,39 +93,26 @@ def baseline_model(train_data_f, test_data_file, output_dir, cv_cross_val=False,
         
         clf.fit(X_train_scaled, y_train)
     
-    y_pred_test = clf.predict(X_test_scaled)
-    y_pred_train = clf.predict(X_train_scaled)
+    y_test_pred = clf.predict(X_test_scaled)
+    y_train_pred = clf.predict(X_train_scaled)
     
     with open('data/le_name_mapping.json', 'r') as f:
         mapping = json.load(f)
         le = LabelEncoder()
     mapping['classes'] = [mapping[str(int(i))] for i in range(9)]
     le.classes_ = np.array(mapping['classes'])
-    plot_cm(y_test, y_pred_test, le, save=save_fig, figname=f'{output_dir}/cm_rfb_test')
-    plot_cm(y_train, y_pred_train, le, save=save_fig, figname=f'{output_dir}/cm_rfb_train')
+    plot_cm(y_test, y_test_pred, le, save=save, figname=f'{output_dir}/cm_rfb_test')
+    plot_cm(y_train, y_train_pred, le, save=save, figname=f'{output_dir}/cm_rfb_train')
     plt.show()
-
-    acc_train = f1_score(y_train, y_pred_train, average='macro')
-    acc_test = f1_score(y_test, y_pred_test, average='macro')
-
-    print(f"F1 score train: {acc_train:.3f}")
-    print(f"F1 score test: {acc_test:.3f}")
-
-    # Make classifcation report
-    cl_report = classification_report(y_test, y_pred_test, target_names=le.classes_, digits=4)
-    print(cl_report)
 
     # Save model
     with open(f"{output_dir}/rf.pkl", 'wb') as f:
         pickle.dump(clf, f)
 
-    # Save classfication report
-    with open(f"{output_dir}/rf_report.txt", 'w') as f:
-        f.write(cl_report)
-    # Save predcitions
-    np.savetxt(f"{output_dir}/rf_pred_test.txt", y_pred_test, fmt='%d')
+    # Calculate f1 and save classification report
+    calcualte_classification_report(y_train, y_train_pred, y_test, y_test_pred, le, save=save, output_dir=output_dir)
 
-    return acc_test, acc_train
+    return 
 
 
 if __name__ == "__main__":
@@ -138,7 +125,7 @@ if __name__ == "__main__":
     output_dir = f"results/clf/rf/{now_str}"
     os.mkdir(output_dir)
 
-    acc_train, acc_test = baseline_model(train_data_f, test_data_f, output_dir, cv_cross_val=False, save_fig=True)
+    baseline_model(train_data_f, test_data_f, output_dir, cv_cross_val=False, save=True)
     print('Done')
 
     #accs_umap = baseline_model()
