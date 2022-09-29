@@ -27,9 +27,9 @@
 
 # Project specific large files
 data/test_tsfresh.csv
-data/testou_tsfresh.csv
+data/test_tsfresh_ourem.csv
 data/train_tsfresh.csv
-data/trainou_tsfresh.csv
+data/train_tsfresh_ourem.csv
 
 
 # User-specific stuff
