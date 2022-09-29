@@ -16,46 +16,22 @@ conda activate eis-battmen
 
 ## Workflow 
 1. Run the process_save.py notebook to calcualte all required data, features and images. (The github repository comes with the data for the FR and CNN model. The tsfresh files are too large and therefore this step is required if you want to run the xgb model.)
-2. Run the model 
-
+2. Run the model of your choice. The results are atuomatically saved in the respective results folder. The name of the folder is based in the timestamp.
 
 Notebooks: 
 
-classification.ipynb: Training testing the model with different splits. The results on the hold out test datset look almost too good. @Ray can you check them?
-data_exploration_plots: Exploring the data and making plots.
-param_regr: Looks like leftovers from experimentation. Can probably be deleted. 
+data_vis_and_exploration.ipynb: Exploring the data and making plots.
 
 py files: 
 utils.py: Code to make plots
-eis_preprocessing.py: Code to preprocess the .csv files with the spectra
+utils_preprocessing.py: Code to preprocess the .csv files with the spectra
 
-eis_tsfresh.xgb.py: Call this script to train or pred. 
-USAGE:
-```bash
-python eis_tsfresh_xgb.py -h
-usage: eis_tsfresh_xgb.py [-h] [--mode MODE] [--modelpath MODELPATH]
-                          [--datapath DATAPATH] [--pred_data PRED_DATA]
+clf_rf.py: Random forest model python script (train, test, save results)
+clf_xgb.py XGB model python script (train, test, save results)
+clf_cnn.py CNN model python script (train, test, save results)
 
-EIS spectra processing with ML
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --mode MODE           Only 'train_clf', 'train_reg' or 'pred' are valid
-                        inputs. You need to train the model beofre calling
-                        prediction if you pass no argument, the cleassifier
-                        and the predictor will be trained and predicitons will
-                        be made
-  --modelpath MODELPATH
-                        Path where to store/load the model from
-  --datapath DATAPATH   Path where to load the data from. In this directory,
-                        there must be a file called train_data.csv adn
-                        test_data.csv
-  --pred_data PRED_DATA
-                        .csv file to use for making predictions. If no
-                        argument is supplied, the script will look for
-                        test_data.csv under datapath
-```
-
+## Legacy text, must be updated before publshed
 
 ## Summary of work
 

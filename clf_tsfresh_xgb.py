@@ -73,11 +73,11 @@ def main(train_data_f, test_data_f, output_dir, save_model, save):
     # Make predictions for train data
     y_train_pred = model.predict(X_train)
     plot_cm(y_train, y_train_pred, le, save=save, figname=f'{output_dir}/train_confusion')
-
+    plt.close()
     # Make predictions for test data
     y_test_pred = model.predict(X_test)
     plot_cm(y_test, y_test_pred, le, save=save, figname=f'{output_dir}/test_confusion')
-
+    plt.close()
     # Save XGB model to joblib
     if save_model:
         joblib.dump(model, f"{output_dir}/model.joblib")
@@ -96,7 +96,7 @@ def main(train_data_f, test_data_f, output_dir, save_model, save):
     return
 
 if __name__ == '__main__':
-    remove_outlier = 1
+    remove_outlier = 0
 
     now = datetime.datetime.now()
     now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
