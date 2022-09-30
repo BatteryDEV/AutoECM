@@ -88,7 +88,7 @@ def main(train_data_f, test_data_f, output_dir, save_model, save):
     
     # Create df from X_test and feature names
     df = pd.DataFrame(X_test, columns=feature_names)
-    shap_feature_analysis(model, df, le, max_display=12, save=save, output_dir=output_dir)
+    shap_feature_analysis(model, df, le, max_display=20, save=save, output_dir=output_dir)
 
     # Calculate f1 and save classification report
     calcualte_classification_report(y_train, y_train_pred, y_test, y_test_pred, le, save=save, output_dir=output_dir)
@@ -96,7 +96,7 @@ def main(train_data_f, test_data_f, output_dir, save_model, save):
     return
 
 if __name__ == '__main__':
-    remove_outlier = 0
+    remove_outlier = 1
 
     now = datetime.datetime.now()
     now_str = now.strftime("%Y-%m-%d_%H-%M-%S")

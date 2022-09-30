@@ -89,10 +89,10 @@ def calcualte_classification_report(y_train, y_train_pred, y_test, y_test_pred, 
 
     if save:
         # Save classfication report
-        with open(f"{output_dir}/rf_report.txt", 'w') as f:
+        with open(f"{output_dir}/report.txt", 'w') as f:
             f.write(cl_report)
         # Save predcitions
-        np.savetxt(f"{output_dir}/rf_pred_test.txt", y_test_pred, fmt='%d')
+        np.savetxt(f"{output_dir}/pred_test.txt", y_test_pred, fmt='%d')
     
     return
 
