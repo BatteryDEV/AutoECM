@@ -15,7 +15,7 @@ conda activate eis-battmen
 ```
 
 ## Workflow 
-1. Run the process_save.py notebook to calcualte all required data, features and images. (The github repository comes with the data for the FR and CNN model. The tsfresh files are too large and therefore this step is required if you want to run the xgb model.)
+1. Run the process_save.py notebook to calculate all required data, features and images. (The github repository comes with the data for the RF and CNN models. The xgboost+tsfresh files are too large and therefore this step is required if you want to run the xgb model.)
 2. Run the model of your choice. The results are atuomatically saved in the respective results folder. The name of the folder is based in the timestamp.
 
 Notebooks: 
