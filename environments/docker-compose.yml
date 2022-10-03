@@ -1,0 +1,14 @@
+version: '3.7'
+
+services:
+  eis-data-inspection:
+    image: eis-data-inspection:latest
+    container_name: eis-data-inspection
+    build: ./
+    expose:
+      - "8056"
+    ports:
+      - "8056:8056"
+    volumes:
+      - .:/home/eis-user
+    command: /bin/bash /home/eis-user/jupyter.sh
