@@ -73,6 +73,10 @@ def process_batch_element_params(Parameters):
     Params = parse_circuit_params_from_str(Parameters)
     return np.array(list(Params.values()))
 
+def process_batch_element_params_str(Parameters):
+    Params = parse_circuit_params_from_str(Parameters)
+    return np.array(list(Params.keys()))
+
 def unwrap_df(df):
     """Unwraps the frequency column into separate rows for each frequency to use UMAP"""
     df2 = pd.DataFrame(columns=["id", "freq", "zreal", "zimag"])
@@ -208,7 +212,7 @@ def plot_all_spectra(df_sorted, fig=None, ax=None, plot_real=True, save=0, color
     else:
         plt.show()
 
-def eis_label_encoder(le_f = 'models/labels.json'):
+def eis_label_encoder(le_f = 'data/le_name_mapping.json'):
     """Load the label encoder"""
     with open(le_f, 'r') as f:
         mapping = json.load(f)
