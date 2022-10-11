@@ -89,7 +89,7 @@ def unwrap_df(df):
         df2 = df2.append(df_, ignore_index=True)
     return df2
 
-def preprocess_data(file_name):
+def preprocess_data(file_name, num_points=30):
     """Preprocesses the data from the CSV filename into a dataframe"""
     ## Load Training Data
     df = eis_dataframe_from_csv(file_name)
@@ -100,7 +100,7 @@ def preprocess_data(file_name):
     # For the training data f_max is 100.000 and f_min is 10.
     # Fixed in here to avoid issed in case this range is larger for the test dataset.
     # If the range is smaller for hte test datset retraining with relevant data and freq. range is necessary.
-    interpolated_basis = np.geomspace(10, 1e5, num=30)
+    interpolated_basis = np.geomspace(10, 1e5, num=num_points)
 
     df["f"] = df.apply(lambda x: process_batch_element_f(interpolated_basis), axis=1)
     df["zreal"] = df.apply(
