@@ -30,7 +30,7 @@ data/test_tsfresh.csv
 data/test_tsfresh_ourem.csv
 data/train_tsfresh.csv
 data/train_tsfresh_ourem.csv
-
+data/reg-tsfresh/
 
 # User-specific stuff
 .idea/**/workspace.xml

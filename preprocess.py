@@ -52,82 +52,6 @@ def extract_tsfresh(df, df_test, output_path, le, if_exclude_outlier=False):
         
     return
 
-def extract_raw_tsfresh_individual_circuit(df, df_test, output_dir, le, if_exclude_outlier=False):
-    """Extracts the tsfresh features from the raw data for each circuit and saves them to a file."""
-    if if_exclude_outlier:
-        df, df_test = exclude_outlier(df, df_test)
-
-    
-    df["param_strs"] = df.apply(
-        lambda x: process_batch_element_params_str(x.Parameters), axis=1
-    )
-    df["param_values"] = df.apply(
-        lambda x: process_batch_element_params(x.Parameters), axis=1
-    )
-
-    df_test["param_strs"] = df_test.apply(
-        lambda x: process_batch_element_params_str(x.Parameters), axis=1
-    )
-    df_test["param_values"] = df_test.apply(
-        lambda x: process_batch_element_params(x.Parameters), axis=1
-    )
-    # Resulting dataframes do not have labels! They only contain the id, freq, z_real, z_imag columns!
-    df_ts = unwrap_df(df)
-    df_ts_test = unwrap_df(df_test)
-
-    for ecm in le.classes_:
-        ## Subselect circuits of given ECM
-        # Train data
-        df_ecm = df[df["Circuit"] == ecm]
-        df_ts_ = df_ts[df_ts["id"].isin(df_ecm.index)]
-        # Test data
-        df_ecm_test = df_test[df_test["Circuit"] == ecm]
-        df_ts_test_ = df_ts_test[df_ts_test["id"].isin(df_ecm_test.index)]
-        
-        # Creating labels y
-        df_x = pd.DataFrame(index=np.unique(df_ts_["id"]))
-        df_x_test = pd.DataFrame(index=np.unique(df_ts_test_["id"]))
-        df_y = pd.DataFrame(
-                df_ecm["param_values"].to_list(),
-                columns=df_ecm["param_strs"].loc[df_ecm.index[0]]
-                )
-        df_y_test = pd.DataFrame(
-                df_ecm_test["param_values"].to_list(),
-                columns=df_ecm_test["param_strs"].loc[df_ecm_test.index[0]]
-                )
-        
-        print(f"Generate Features for {ecm}")
-        df_ecm = df[df["Circuit"] == ecm]
-        augmenter = FeatureAugmenter(
-                        column_id="id",
-                        column_sort="freq",
-                        default_fc_parameters=ComprehensiveFCParameters()
-                    )
-        
-        augmenter.set_params(timeseries_container=df_ts)
-        X = augmenter.fit_transform(df_x, df_y)
-        augmenter.set_params(timeseries_container=df_ts_test)
-        X_test = augmenter.transform(df_x_test)
-
-        # Save data
-        print("Saving tsfresh feature data...")
-        
-        output_path =  f"{output_dir}{ecm}_data_train.csv"
-        if if_exclude_outlier:
-            output_path = output_path.replace(".", "ou.")
-
-        np.savetxt(output_path, np.c_[np.array(X), np.array(df_y)], delimiter=',')
-        np.savetxt(output_path.replace("train", "test"), np.c_[np.array(X_test), np.array(df_y_test)], delimiter=',')   
-        # Save the feature names as json 
-        with open(output_path.replace("train", "feature_names").replace('.csv', '.json'), 'w') as f:
-            json.dump(list(X.columns), f)
-        
-        # Save the parameter names as json
-        with open(output_path.replace("data_train.csv", "param_names.json"), "w") as f:
-            json.dump(df_ecm["param_strs"].loc[df_ecm.index[0]].tolist(), f)
-
-    return 
-
 def extract_raw_interpolated(df, df_test, output_path, le, if_exclude_outlier=False):
     """Extracts the raw interpolated spectra from the raw data and saves them to a file."""
 
@@ -227,16 +151,13 @@ if __name__ == "__main__":
     le.classes_ = np.array(mapping['classes'])
     
     # Extract features, by uncommenting the function you want to use
-
-    # print("Preprocessing data...")
-    # extract_raw_interpolated(df, df_test, output_path_raw, le, if_exclude_outlier=True)
-    # print("Preprocessing data UMAP...")
+    print("Preprocessing data...")
+    extract_raw_interpolated(df, df_test, output_path_raw, le, if_exclude_outlier=True)
+    
+    # print("Preprocessing data tsfresh...")
     # extract_tsfresh(df, df_test,  output_path_tsfresh, if_exclude_outlier=False)
     # extract_tsfresh(df, df_test,  output_path_tsfresh, if_exclude_outlier=True)
     # print("Preprocessing data images...")
     # transform_data_to_images(df, df_test, le, output_path_cnn, plot_spectra=True)
 
-    print("Preprocessing for regression task...")
-    output_dir_regression = 'data/reg-tsfresh/'
-    extract_raw_tsfresh_individual_circuit(df, df_test, output_dir_regression, le, if_exclude_outlier=False)
     print("Done.")
