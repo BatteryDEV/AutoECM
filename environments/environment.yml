@@ -1,4 +1,4 @@
-name: eis-battmen
+name: eis-ml
 channels:
   - defaults
   - conda-forge
