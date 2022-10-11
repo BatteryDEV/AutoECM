@@ -2,17 +2,19 @@ import numpy as np
 import pandas as pd
 import json
 import os
-import cv2
 from tsfresh.transformers import RelevantFeatureAugmenter
+from tsfresh.transformers import FeatureAugmenter
 from tsfresh.feature_extraction import ComprehensiveFCParameters
 from sklearn.preprocessing import LabelEncoder
 from utils_preprocessing import preprocess_data
 from utils_preprocessing import unwrap_df
 from utils_preprocessing import exclude_outlier
-from utils_preprocessing import plot_all_spectra
+from utils_preprocessing import process_batch_element_params_str 
+from utils_preprocessing import process_batch_element_params
 
-def extract_umap(df, df_test,  output_path, if_exclude_outlier=False):
-    """Extracts the umap features from the raw data and saves them to a file.
+
+def extract_tsfresh(df, df_test, output_path, le, if_exclude_outlier=False):
+    """Extracts the tsfresh features from the raw data and saves them to a file.
     """
 
     if if_exclude_outlier:
@@ -26,13 +28,6 @@ def extract_umap(df, df_test,  output_path, if_exclude_outlier=False):
     # Creating labels y
     df_x = pd.DataFrame(index=np.unique(df_ts["id"]))
     df_x_test = pd.DataFrame(index=np.unique(df_ts_test["id"]))
-
-    # Creating labels y
-    with open(le_path, 'r') as f:
-        mapping = json.load(f)
-        le = LabelEncoder()
-    mapping['classes'] = [mapping[str(int(i))] for i in range(9)]
-    le.classes_ = np.array(mapping['classes'])
 
     df_y = pd.Series(data=(le.transform(df["Circuit"])), index=np.unique(df_ts["id"]))
     df_y_test = pd.Series(data=(le.transform(df_test["Circuit"])), index=np.unique(df_ts_test["id"]))
@@ -48,7 +43,7 @@ def extract_umap(df, df_test,  output_path, if_exclude_outlier=False):
     X_test = augmenter.transform(df_x_test)
 
     # Save data
-    print("Saving umap feature data...")
+    print("Saving tsfresh feature data...")
     np.savetxt(output_path, np.c_[np.array(X), np.array(df_y)], delimiter=',')
     np.savetxt(output_path.replace("train", "test"), np.c_[np.array(X_test), np.array(df_y_test)], delimiter=',')   
     # Save the feature names as json 
@@ -57,19 +52,88 @@ def extract_umap(df, df_test,  output_path, if_exclude_outlier=False):
         
     return
 
-def extract_raw_interpolated(df, df_test, output_path, le_path, if_exclude_outlier=False):
+def extract_raw_tsfresh_individual_circuit(df, df_test, output_dir, le, if_exclude_outlier=False):
+    """Extracts the tsfresh features from the raw data for each circuit and saves them to a file."""
+    if if_exclude_outlier:
+        df, df_test = exclude_outlier(df, df_test)
+
+    
+    df["param_strs"] = df.apply(
+        lambda x: process_batch_element_params_str(x.Parameters), axis=1
+    )
+    df["param_values"] = df.apply(
+        lambda x: process_batch_element_params(x.Parameters), axis=1
+    )
+
+    df_test["param_strs"] = df_test.apply(
+        lambda x: process_batch_element_params_str(x.Parameters), axis=1
+    )
+    df_test["param_values"] = df_test.apply(
+        lambda x: process_batch_element_params(x.Parameters), axis=1
+    )
+    # Resulting dataframes do not have labels! They only contain the id, freq, z_real, z_imag columns!
+    df_ts = unwrap_df(df)
+    df_ts_test = unwrap_df(df_test)
+
+    for ecm in le.classes_:
+        ## Subselect circuits of given ECM
+        # Train data
+        df_ecm = df[df["Circuit"] == ecm]
+        df_ts_ = df_ts[df_ts["id"].isin(df_ecm.index)]
+        # Test data
+        df_ecm_test = df_test[df_test["Circuit"] == ecm]
+        df_ts_test_ = df_ts_test[df_ts_test["id"].isin(df_ecm_test.index)]
+        
+        # Creating labels y
+        df_x = pd.DataFrame(index=np.unique(df_ts_["id"]))
+        df_x_test = pd.DataFrame(index=np.unique(df_ts_test_["id"]))
+        df_y = pd.DataFrame(
+                df_ecm["param_values"].to_list(),
+                columns=df_ecm["param_strs"].loc[df_ecm.index[0]]
+                )
+        df_y_test = pd.DataFrame(
+                df_ecm_test["param_values"].to_list(),
+                columns=df_ecm_test["param_strs"].loc[df_ecm_test.index[0]]
+                )
+        
+        print(f"Generate Features for {ecm}")
+        df_ecm = df[df["Circuit"] == ecm]
+        augmenter = FeatureAugmenter(
+                        column_id="id",
+                        column_sort="freq",
+                        default_fc_parameters=ComprehensiveFCParameters()
+                    )
+        
+        augmenter.set_params(timeseries_container=df_ts)
+        X = augmenter.fit_transform(df_x, df_y)
+        augmenter.set_params(timeseries_container=df_ts_test)
+        X_test = augmenter.transform(df_x_test)
+
+        # Save data
+        print("Saving tsfresh feature data...")
+        
+        output_path =  f"{output_dir}{ecm}_data_train.csv"
+        if if_exclude_outlier:
+            output_path = output_path.replace(".", "ou.")
+
+        np.savetxt(output_path, np.c_[np.array(X), np.array(df_y)], delimiter=',')
+        np.savetxt(output_path.replace("train", "test"), np.c_[np.array(X_test), np.array(df_y_test)], delimiter=',')   
+        # Save the feature names as json 
+        with open(output_path.replace("train", "feature_names").replace('.csv', '.json'), 'w') as f:
+            json.dump(list(X.columns), f)
+        
+        # Save the parameter names as json
+        with open(output_path.replace("data_train.csv", "param_names.json"), "w") as f:
+            json.dump(df_ecm["param_strs"].loc[df_ecm.index[0]].tolist(), f)
+
+    return 
+
+def extract_raw_interpolated(df, df_test, output_path, le, if_exclude_outlier=False):
     """Extracts the raw interpolated spectra from the raw data and saves them to a file."""
 
     if if_exclude_outlier:
         df, df_test = exclude_outlier(df, df_test)
         output_path = output_path.replace(".csv", "_ourem.csv")
-        
-    # Creating labels y
-    with open(le_path, 'r') as f:
-        mapping = json.load(f)
-        le = LabelEncoder()
-    mapping['classes'] = [mapping[str(int(i))] for i in range(9)]
-    le.classes_ = np.array(mapping['classes'])
 
     df_y = pd.Series(data=(le.transform(df["Circuit"])), index=df.index)
     df_y_test = pd.Series(data=(le.transform(df_test["Circuit"])), index=df_test.index)
@@ -123,11 +187,27 @@ def plot_eis_nyquist_individual(df: pd.DataFrame, path, name='train', ):
         #plt.show()
     return
 
-def transform_data_to_images(df, df_test, le_path, output_path, plot_spectra=True):
+def transform_data_to_images(df, df_test, le, output_path, plot_spectra=True):
     """Transforms the raw data to images and saves them to a file."""
 
-    # Now use the common frequency for all the data 
-    # and convert to images. Usable coloumns are zreal and zimag
+    # Now let's make the images
+    plot_eis_nyquist_individual(df, output_path, name='train')
+    plot_eis_nyquist_individual(df_test, output_path, name='test')
+    return 
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    plt.ion()
+    train_data_fname = 'data/train_data.csv'
+    test_data_fname = 'data/test_data.csv'
+    output_path_tsfresh = 'data/train_tsfresh.csv'
+    output_path_raw = 'data/train_data_inter.csv'
+    output_path_cnn = 'data/images/'
+    le_path = 'data/le_name_mapping.json'
+
+    df = preprocess_data(train_data_fname)
+    df_test = preprocess_data(test_data_fname)
 
     # Load label encoder
     with open(le_path, 'r') as f:
@@ -138,31 +218,25 @@ def transform_data_to_images(df, df_test, le_path, output_path, plot_spectra=Tru
     mapping['classes'] = [mapping[str(int(i))] for i in range(nb_classes)]
     le.classes_ = np.array(mapping['classes'])
 
-    # Now let's make the images
-    plot_eis_nyquist_individual(df, output_path, name='train')
-    plot_eis_nyquist_individual(df_test, output_path, name='test')
+    # Creating labels y
+    with open(le_path, 'r') as f:
+        mapping = json.load(f)
 
-    return 
-
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    plt.ion()
-    train_data_fname = 'data/train_data.csv'
-    test_data_fname = 'data/test_data.csv'
-    output_path_umap = 'data/train_tsfresh.csv'
-    output_path_raw = 'data/train_data_inter.csv'
-    output_path_cnn = 'data/images/'
-    le_path = 'data/le_name_mapping.json'
-
-    df = preprocess_data(train_data_fname)
-    df_test = preprocess_data(test_data_fname)
+    le = LabelEncoder()
+    mapping['classes'] = [mapping[str(int(i))] for i in range(9)]
+    le.classes_ = np.array(mapping['classes'])
     
-    print("Preprocessing data...")
-    extract_raw_interpolated(df, df_test, output_path_raw, le_path, if_exclude_outlier=True)
+    # Extract features, by uncommenting the function you want to use
+
+    # print("Preprocessing data...")
+    # extract_raw_interpolated(df, df_test, output_path_raw, le, if_exclude_outlier=True)
     # print("Preprocessing data UMAP...")
-    # extract_umap(df, df_test,  output_path_umap, if_exclude_outlier=False)
-    # extract_umap(df, df_test,  output_path_umap, if_exclude_outlier=True)
+    # extract_tsfresh(df, df_test,  output_path_tsfresh, if_exclude_outlier=False)
+    # extract_tsfresh(df, df_test,  output_path_tsfresh, if_exclude_outlier=True)
     # print("Preprocessing data images...")
-    # transform_data_to_images(df, df_test, le_path, output_path_cnn, plot_spectra=True)
+    # transform_data_to_images(df, df_test, le, output_path_cnn, plot_spectra=True)
+
+    print("Preprocessing for regression task...")
+    output_dir_regression = 'data/reg-tsfresh/'
+    extract_raw_tsfresh_individual_circuit(df, df_test, output_dir_regression, le, if_exclude_outlier=False)
     print("Done.")
