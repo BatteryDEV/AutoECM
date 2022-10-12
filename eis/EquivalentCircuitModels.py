@@ -1,3 +1,4 @@
+# author: Raymond Gasper
 from typing import Any, Callable, List, Tuple
 import numpy as np
 from scipy.optimize import curve_fit

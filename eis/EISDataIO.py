@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
+# author: Raymond Gasper
 
 import ast
 from operator import index

@@ -1,3 +1,4 @@
+# author: Raymond Gasper
 from tempfile import NamedTemporaryFile
 from numpy import nan
 from .scoring import (

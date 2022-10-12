@@ -1,3 +1,4 @@
+# author: Raymond Gasper
 import logging
 
 from eis.EquivalentCircuitModels import EquivalentCircuitModel

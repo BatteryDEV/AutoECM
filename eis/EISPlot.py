@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
+# author: Raymond Gasper
 
 from eis.EquivalentCircuitModels import EquivalentCircuitModel
 from typing import Optional, Any

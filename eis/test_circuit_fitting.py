@@ -1,3 +1,4 @@
+# author: Raymond Gasper
 from .EISDataIO import eis_dataframe_from_csv, ECM_from_raw_strings
 
 

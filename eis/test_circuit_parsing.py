@@ -1,3 +1,4 @@
+# author: Raymond Gasper
 from .EISDataIO import (
     ECM_from_raw_strings,
     register_circuit_class,

@@ -58,4 +58,8 @@ Furthermore, the repository contains unlabeled spectra (~19k spectra). We thank 
 ## License
 
 The codecode in this repository is made publicly available under the terms of the MIT license as denoted in the `LICENSE` file. 
-The data in this article is shared under the terms of the CC-BY 4.0 license according to the file `data\LICENSE`. 
+The data in this article is shared under the terms of the CC-BY 4.0 license according to the file `data\LICENSE`.
+
+## Acknowledment/Citation
+
+If you use code from this repositroy for your work, please cite:
