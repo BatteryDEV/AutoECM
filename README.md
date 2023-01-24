@@ -13,10 +13,11 @@ A `requirements.txt` file and, alternatively, a file `environment.yml` is provid
 Firstly to set up the environment, please run the following:
 
 ```bash
-conda env create --name eis-ml
+conda create -n "eis-ml" python=3.9.15 ipython
 conda activate eis-ml
 pip install -r requirements.txt
 ```
+If you are on MacOS you might have to install tensorflw and tsfresh separately/manually fix the installation of subdependdecies etc.
 
 ## Workflow 
 

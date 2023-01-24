@@ -3,10 +3,10 @@ import pandas as pd
 import json
 import joblib
 import matplotlib.pyplot as plt
-
 import xgboost as xgb
 
 from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import GridSearchCV
 
 import datetime
 import os
@@ -60,11 +60,40 @@ def load_features_le(train_data_f, test_data_f, le_f):
     le.classes_ = np.array(mapping['classes'])
     return X_train, y_train, X_test, y_test, le 
 
-def main(train_data_f, test_data_f, output_dir, save_model, save): 
+def main(train_data_f, test_data_f, output_dir, save_model, cross_val=False, save=False): 
     """XGB Classifier, based on precomputed features"""
 
     le_f = "data/le_name_mapping.json"
     X_train, y_train, X_test, y_test, le = load_features_le(train_data_f, test_data_f, le_f)
+
+    if cross_val: 
+        # Simple grid search implementation.
+        parameters = { 
+            'max_depth': [3, 9, 20],
+            'learning_rate': [0.01, 0.05, 0.2],
+            'n_estimators': [100, 200],
+            'reg_lambda': [0.1, 1, 10],
+            'subsample': [0.3, 0.7],
+            }
+
+        clf = xgb.XGBClassifier(random_state=42)
+        
+        # Does that exist fo xgb?
+        # class_weight='balanced_subsample', max_depth=None, random_state=42)
+        
+        clf_gs = GridSearchCV(clf, parameters, scoring='f1_macro', cv=4, n_jobs=-1, verbose=3)
+        
+        # Is X_train also scaled?
+        clf_gs.fit(X_train, y_train,)
+        # Print the best parameters
+        print("Best parameters set found on training set:")
+        print(clf_gs.best_params_)
+        clf = clf_gs.best_estimator_
+    if 0:#random_search:
+        # implement random search here to save some time.
+        pass
+
+
 
     # Create XGBoost model
     model = xgb.XGBClassifier(random_state=42, n_jobs=-1)
@@ -113,4 +142,4 @@ if __name__ == '__main__':
         train_data_f = "data/train_tsfresh.csv"
         test_data_f = "data/test_tsfresh.csv"
 
-    main(train_data_f, test_data_f, output_dir, save_model=True, save=True)
+    main(train_data_f, test_data_f, output_dir, cross_val=True, save_model=False, save=False)
