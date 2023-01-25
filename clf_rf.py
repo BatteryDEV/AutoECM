@@ -5,8 +5,8 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.metrics import f1_score
-from hyperopt import fmin, tpe, hp, Trials, STATUS_OK
-from hyperopt.pyll import scope
+#from hyperopt import fmin, tpe, hp, Trials, STATUS_OK
+#from hyperopt.pyll import scope
 from utils import plot_cm, calcualte_classification_report
 import pickle
 import datetime
@@ -92,18 +92,22 @@ def baseline_model(train_data_f, test_data_file, output_dir, cross_val=False, sa
     if cross_val == 'extended':
         # Extended cross validation, using GridSearchCV.
         # Best parameters set found on training set:
-        # {'bootstrap': True, 'max_depth': 75, 'max_features': None, 'min_samples_leaf': 1, 'min_samples_split': 5, 'n_estimators': 300}
-        # [0.43746647 0.40448133 0.42272766 0.41408191 0.40148227]
-        # F1 score test: 0.402 
+        # [0.43653685 0.41828877 0.42104292 0.41372522 0.40374951]
+        # Best parameters set found on training set:
+        # {'bootstrap': True, 'max_depth': 75, 'max_features': None, 'min_samples_leaf': 1, 'min_samples_split': 3, 'n_estimators': 600}
+        #  accuracy                         0.4113      1865
+        # macro avg     0.4046    0.4154    0.4076      1865
+        # weighted avg  0.3953    0.4113    0.4008      1865
         # Only minor imporvements over the simple cross validation, staticitcally insignificant on the test set 
-        folds = 4 
+        folds = 5
         parameters = {
             'bootstrap': [True, False],
             'max_depth': [10, 75, None],
             'max_features': ['sqrt', None],
-            'min_samples_leaf': [1, 3, 5],
-            'min_samples_split': [2, 5],
-            'n_estimators': [10, 100, 300]}
+            'min_samples_leaf': [1, 3, 5, 10],
+            'min_samples_split': [2, 3, 5, 8],
+            'n_estimators': [10, 100, 300, 600]
+            }
 
         clf = RandomForestClassifier(
             class_weight='balanced_subsample', max_depth=None, random_state=42)
@@ -174,7 +178,7 @@ def baseline_model(train_data_f, test_data_file, output_dir, cross_val=False, sa
     y_test_pred = clf.predict(X_test_scaled)
     y_train_pred = clf.predict(X_train_scaled)
     
-    with open('data/le_name_mapping.json', 'r') as f:
+    with open('Users/joachim.schaeffer/AutoECM/data/le_name_mapping.json', 'r') as f:
         mapping = json.load(f)
         le = LabelEncoder()
     mapping['classes'] = [mapping[str(int(i))] for i in range(9)]
@@ -195,13 +199,13 @@ def baseline_model(train_data_f, test_data_file, output_dir, cross_val=False, sa
 
 
 if __name__ == "__main__":
-    train_data_f = "data/train_data_inter.csv"
-    test_data_f = "data/test_data_inter.csv"
+    train_data_f = "Users/joachim.schaeffer/AutoECM/data/train_data_inter.csv"
+    test_data_f = "Users/joachim.schaeffer/AutoECM/data/test_data_inter.csv"
 
     # Create new folder with results, name is datetime
     now = datetime.datetime.now()
     now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
-    output_dir = f"results/clf/rf/{now_str}"
+    output_dir = f"Users/joachim.schaeffer/AutoECM/results/clf/rf/{now_str}"
     os.mkdir(output_dir)
 
     baseline_model(train_data_f, test_data_f, output_dir, cross_val='extended', save=False)

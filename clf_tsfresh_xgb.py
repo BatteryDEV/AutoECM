@@ -7,7 +7,7 @@ import xgboost as xgb
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import GridSearchCV
-
+import pickle
 import datetime
 import os
 from utils import shap_feature_analysis, plot_cm, calcualte_classification_report
@@ -63,18 +63,13 @@ def load_features_le(train_data_f, test_data_f, le_f):
 def main(train_data_f, test_data_f, output_dir, save_model, cross_val=False, save=False): 
     """XGB Classifier, based on precomputed features"""
 
-    le_f = "data/le_name_mapping.json"
+    le_f = "Users/joachim.schaeffer/AutoECM/data/le_name_mapping.json"
     X_train, y_train, X_test, y_test, le = load_features_le(train_data_f, test_data_f, le_f)
 
     if cross_val: 
         # Simple grid search implementation.
-        parameters = { 
-            'max_depth': [3, 9, 20],
-            'learning_rate': [0.01, 0.05, 0.2],
-            'n_estimators': [100, 200],
-            'reg_lambda': [0.1, 1, 10],
-            'subsample': [0.3, 0.7],
-            }
+        parameters = {
+            'max_depth': [3, 10, 15, 20]}
 
         clf = xgb.XGBClassifier(random_state=42)
         
@@ -84,10 +79,12 @@ def main(train_data_f, test_data_f, output_dir, save_model, cross_val=False, sav
         clf_gs = GridSearchCV(clf, parameters, scoring='f1_macro', cv=4, n_jobs=-1, verbose=3)
         
         # Is X_train also scaled?
-        clf_gs.fit(X_train, y_train,)
+        clf_gs.fit(X_train, y_train)
         # Print the best parameters
         print("Best parameters set found on training set:")
         print(clf_gs.best_params_)
+        with open('best_hyperparameters.txt', 'w') as f:
+            f.write(str(clf_gs.best_params_))
         clf = clf_gs.best_estimator_
     if 0:#random_search:
         # implement random search here to save some time.
@@ -108,8 +105,8 @@ def main(train_data_f, test_data_f, output_dir, save_model, cross_val=False, sav
     plot_cm(y_test, y_test_pred, le, save=save, figname=f'{output_dir}/test_confusion')
     plt.close()
     # Save XGB model to joblib
-    if save_model:
-        joblib.dump(model, f"{output_dir}/model.joblib")
+    #if save_model:
+    #    joblib.dump(model, f"{output_dir}/model.joblib")
 
     # Load feature names from json file to list
     with open('data/feature_names_tsfresh.json', 'r') as f:
@@ -117,10 +114,10 @@ def main(train_data_f, test_data_f, output_dir, save_model, cross_val=False, sav
     
     # Create df from X_test and feature names
     df = pd.DataFrame(X_test, columns=feature_names)
-    shap_feature_analysis(model, df, le, max_display=20, save=save, output_dir=output_dir)
+    #shap_feature_analysis(model, df, le, max_display=20, save=save, output_dir=output_dir)
 
     # Calculate f1 and save classification report
-    calcualte_classification_report(y_train, y_train_pred, y_test, y_test_pred, le, save=save, output_dir=output_dir)
+    #calcualte_classification_report(y_train, y_train_pred, y_test, y_test_pred, le, save=save, output_dir=output_dir)
     print("Done")
     return
 
@@ -130,16 +127,16 @@ if __name__ == '__main__':
     now = datetime.datetime.now()
     now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
     output_dir = f"results/clf/xgb/{now_str}"
-    os.mkdir(output_dir)
+    #os.mkdir(output_dir)
 
     if remove_outlier:
-        train_data_f = "data/train_tsfresh_ourem.csv"
-        test_data_f = "data/test_tsfresh_ourem.csv"
+        train_data_f = "Users/joachim.schaeffer/AutoECM/data/train_tsfresh_ourem.csv"
+        test_data_f = "Users/joachim.schaeffer/AutoECM/data/test_tsfresh_ourem.csv"
         # Save outlier removed variable as txt file
-        with open(f"{output_dir}/outlier_removed.txt", 'w') as f:
-            f.write("Outlier removed")
+        #with open(f"{output_dir}/outlier_removed.txt", 'w') as f:
+        #    f.write("Outlier removed")
     else:
-        train_data_f = "data/train_tsfresh.csv"
-        test_data_f = "data/test_tsfresh.csv"
+        train_data_f = "Users/joachim.schaeffer/AutoECM/data/train_tsfresh.csv"
+        test_data_f = "Users/joachim.schaeffer/AutoECM/data/test_tsfresh.csv"
 
     main(train_data_f, test_data_f, output_dir, cross_val=True, save_model=False, save=False)
