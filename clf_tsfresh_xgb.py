@@ -8,7 +8,7 @@ import scipy.stats as stats
 from sklearn.utils.fixes import loguniform
 
 from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, cross_val_score
 import pickle
 import datetime
 import os
@@ -59,15 +59,13 @@ def load_features_le(train_data_f, test_data_f, le_f):
     le.classes_ = np.array(mapping['classes'])
     return X_train, y_train, X_test, y_test, le 
 
-def main(train_data_f, test_data_f, output_dir, save_model, cross_val=False, save=False): 
-    """XGB Classifier, based on precomputed features"""
+def hyperparameter_optimization(le_f, cross_val='grid', save_best_params=True, output_dir=''):
+    """ Cross validation for hyperparameter optimization"""
 
-    le_f = "data/le_name_mapping.json"
     X_train, y_train, X_test, y_test, le = load_features_le(train_data_f, test_data_f, le_f)
-
     if cross_val is not None:
         if cross_val=='grid': 
-            # Simple grid search implementation.
+            # Grid search implementation.
             # best parameters set found on training set:
             # {'colsample_bylevel': 0.4, 'colsample_bytree': 1.0, 
             # 'learning_rate': 0.1, 'max_depth': 20, 'n_estimators': 600, 'subsample': 0.75
@@ -90,7 +88,6 @@ def main(train_data_f, test_data_f, output_dir, save_model, cross_val=False, sav
             clf = xgb.XGBClassifier(random_state=42)
             # Does that exist fo xgb?
             # class_weight='balanced_subsample', max_depth=None, random_state=42)
-            
             clf_s = GridSearchCV(clf, parameters, scoring='f1_macro', cv=4, n_jobs=-1, verbose=3)
 
         if cross_val=='random':
@@ -118,23 +115,52 @@ def main(train_data_f, test_data_f, output_dir, save_model, cross_val=False, sav
             clf = xgb.XGBClassifier(random_state=42)
             clf_s = RandomizedSearchCV(
                 clf, param_distributions=parameters, n_iter=60, scoring='f1_macro', cv=4, n_jobs=-1, verbose=3)
-            
-        # Is X_train also scaled?
+        
         clf_s.fit(X_train, y_train)
         # Print the best parameters
         print("Best parameters set found on training set:")
         print(clf_s.best_params_)
-        with open('best_hyperparameters.txt', 'w') as f:
-            f.write(str(clf_s.best_params_))
-        clf = clf_s.best_estimator_
-
-    # Create XGBoost model
-    # default
-    # accuracy                              0.5116      1857
-    # macro avg         0.5386    0.5326    0.5340      1857
-    # weighted avg      0.5095    0.5116    0.5091      1857
-    model = xgb.XGBClassifier(
+        if save_best_params:
+            with open(f"{output_dir}/best_hyperparameters.txt", 'w') as f:
+                f.write(str(clf_s.best_params_))
+        tuned_model = clf_s.best_estimator_
+    else: 
+        # tuned model found by previosu run, for comparison
+        tuned_model = xgb.XGBClassifier(
+            random_state=42, n_jobs=-1,
+            colsample_bylevel = 0.4, colsample_bytree = 1.0, 
+            learning_rate = 0.1, max_depth = 20, 
+            n_estimators = 600, subsample = 0.75)
+    
+    # Compare the tuned model with the default model by using the crossvalidation scores 
+    # IN the publication: XGB 1.5.0, default parameters: https://xgboost.readthedocs.io/en/latest/parameter.html
+    default_model = xgb.XGBClassifier(
         random_state=42, n_jobs=-1)
+
+    tuned_model_score = cross_val_score(tuned_model, X_train, y_train, cv=5, n_jobs=-1, scoring='f1_macro')
+    default_model_score = cross_val_score(default_model, X_train, y_train, cv=5, n_jobs=-1, scoring='f1_macro')
+    print('Tuned model score: ', tuned_model_score.mean())
+    print('Default model score: ', default_model_score.mean())
+    print('Difference: ', tuned_model_score.mean() - default_model_score.mean())
+    # Standard deviations
+    print('Tuned model std: ', tuned_model_score.std())
+    print('Default model std: ', default_model_score.std())
+    print('Comparison done!')
+    # Tuned model score:  0.5438601022759165
+    # Default model score:  0.5430063300012915
+    # Difference:  0.0008537722746250198
+    # Tuned model std:  0.007275628673365595
+    # Default model std:  0.00840176590947259
+    return tuned_model
+
+
+def main(train_data_f, test_data_f, output_dir, le_f, save_model, model=None, cross_val=False, save=False): 
+    """XGB Classifier, based on precomputed features"""
+
+    X_train, y_train, X_test, y_test, le = load_features_le(train_data_f, test_data_f, le_f)
+
+    if model is None:
+        model = xgb.XGBClassifier(random_state=42, n_jobs=-1)
     
     model.fit(X_train, y_train)
     # Make predictions for train data
@@ -164,7 +190,7 @@ def main(train_data_f, test_data_f, output_dir, save_model, cross_val=False, sav
 
 if __name__ == '__main__':
     remove_outlier = 1
-
+    le_f = "data/le_name_mapping.json"
     now = datetime.datetime.now()
     now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
     output_dir = f"results/clf/xgb/{now_str}"
@@ -180,4 +206,6 @@ if __name__ == '__main__':
         train_data_f = "data/train_tsfresh.csv"
         test_data_f = "data/test_tsfresh.csv"
 
-    main(train_data_f, test_data_f, output_dir, cross_val=None, save_model=False, save=False)
+    # tuned_model = hyperparameter_optimization(le_f, cross_val=None, save_best_params=True, output_dir=output_dir)
+
+    main(train_data_f, test_data_f, output_dir, le_f, save_model=True, save=True)
