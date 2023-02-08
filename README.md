@@ -1,10 +1,8 @@
 # Machine Learning-based Classification of Electrochemical Impedance Spectra
 
-This folder contains the code to the corresponding publication:
-
-"MACHINE LEARNING BENCHMARKS FOR THE CLASSIFICATION AND PARAMETERIZATION OF EQUIVALENT CIRCUIT MODELS FROM SOLID STATE ELECTROCHEMICAL IMPEDANCE SPECTRA"
-Available on the archiv.
-
+This repository contains the code to the corresponding publication:
+"Machine learning benchmarks for the classification of equivalent circuit models from solid-state electrochemical impedance spectra"
+http://arxiv.org/abs/2302.03362
 
 ## Setup
 
@@ -63,4 +61,15 @@ The data in this article is shared under the terms of the CC-BY 4.0 license acco
 
 ## Acknowledment/Citation
 
-If you use code from this repositroy for your work, please cite: To be updated!
+If you use code from this repositroy for your work, please cite: 
+
+@misc{ECM_classficiation_EIS_23,
+  author = {Schaeffer, Joachim and Gasper, Paul and Garcia-Tamayo, Esteban and Gasper, Raymond and Adachi, Masaki and Gaviria-Cardona, Juan Pablo and Montoya-Bedoya, Simon and Bhutani, Anoushka and Schiek, Andrew and Goodall, Rhys and Findeisen, Rolf and Braatz, Richard D. and Engelke, Simon},
+  keywords = {Machine Learning (cs.LG), Materials Science (cond-mat.mtrl-sci), FOS: Computer and information sciences, FOS: Computer and information sciences, FOS: Physical sciences, FOS: Physical sciences, 68T10},
+  title = {Machine learning benchmarks for the classification of equivalent circuit models from solid-state electrochemical impedance spectra},
+  note = {arXiv preprint, https://arxiv.org/abs/2302.03362},
+  eprint	= {2302.03362},
+  archiveprefix = {arXiv},
+  doi = {10.48550/ARXIV.2302.03362},
+  year = {2023}
+}
