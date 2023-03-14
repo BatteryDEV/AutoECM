@@ -22,15 +22,30 @@
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
+results/clf/cnn/*
+!results/clf/cnn/2022-09-29_19-22-57/
+!results/clf/cnn/2023-03-14_12-29-00/
+
+results/clf/rf/*
+!results/clf/rf/2023-01-26_10-37-20/
+
+results/clf/xgb/*
+!results/clf/xgb/2023-01-26_11-19-01/
+
+
 # Mac users
 .DS_Store
+.__.DS_Store
+
+# Azure
+.amlignore
+.amlignore.amltmp
 
 # Project specific large files
-data/test_tsfresh.csv
-data/test_tsfresh_ourem.csv
-data/train_tsfresh.csv
-data/train_tsfresh_ourem.csv
-data/reg-tsfresh/
+data/tsfresh/test_tsfresh.csv
+data/tsfresh/test_tsfresh_ourem.csv
+data/tsfresh/train_tsfresh.csv
+data/tsfresh/train_tsfresh_ourem.csv
 
 # User-specific stuff
 .idea/**/workspace.xml
