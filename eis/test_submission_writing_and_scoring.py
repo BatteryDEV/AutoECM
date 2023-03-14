@@ -7,7 +7,11 @@ from .scoring import (
     ECM_class_classification_scorer,
     ECM_params_initial_guess_scorer,
 )
-from .EISDataIO import ECM_from_raw_strings, eis_dataframe_from_csv, eis_dataframe_to_csv
+from .EISDataIO import (
+    ECM_from_raw_strings,
+    eis_dataframe_from_csv,
+    eis_dataframe_to_csv,
+)
 
 
 class Test_EIS_IO_scoring:
@@ -66,4 +70,3 @@ class Test_EIS_IO_scoring:
             eis_dataframe_to_csv(subset, temp.name)
             read_it_back = eis_dataframe_from_csv(temp.name)
             assert read_it_back.equals(subset)
-

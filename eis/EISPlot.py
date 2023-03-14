@@ -9,17 +9,17 @@ import matplotlib.pyplot as plt
 
 
 def plot_eis(
-    frequencies: np.ndarray[Any, np.dtype[np.float_]],
-    impedance: np.ndarray[Any, np.dtype[np.complex_]],
+    frequencies: np.ndarray,
+    impedance: np.ndarray,
     title: Optional[str] = None,
     ECM: Optional[EquivalentCircuitModel] = None,
 ):
-    """ Creates a single figure w/ both Bode and Nyquist plots of a single EIS spectrum.
+    """Creates a single figure w/ both Bode and Nyquist plots of a single EIS spectrum.
     Plots the results of a simulated circuit as well if provided
 
     Args:
-        frequency (np.ndarray[Any, np.dtype[np.float_]]): numpy array of frequency values. Real, positive numbers
-        impedance (np.ndarray[Any, np.dtype[np.complex_]]): numpy array of impedance values. Imaginary numbers
+        frequency (np.ndarray): numpy array of frequency values. Real, positive numbers
+        impedance (np.ndarray): numpy array of impedance values. Imaginary numbers
         title (Optional[str]): A figure title. Defaults to None.
         ECM (Optional[Circuit]) A Equivalent Circuit Model. Defaults to None.
     """

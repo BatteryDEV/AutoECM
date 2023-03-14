@@ -21,13 +21,9 @@ from eis.EquivalentCircuitModels import (
     RC_G_G,
     EquivalentCircuitModel,
 )
-from pandas._typing import (
-    FilePath,
-    WriteBuffer,
-    ReadCsvBuffer,
-)
 
-CIRCUIT_NAME_TO_CIRCUIT: dict = {
+
+CIRCUIT_NAME_TO_CIRCUIT: dict[str, type[EquivalentCircuitModel]] = {
     "RCPE": RCPE,
     "RCPE-RCPE": RCPE_RCPE,
     "RCPE-RCPE-RCPE": RCPE_RCPE_RCPE,
@@ -41,14 +37,18 @@ CIRCUIT_NAME_TO_CIRCUIT: dict = {
 }
 
 
-def register_circuit_class(circuitClass: type[EquivalentCircuitModel], circuit_name: str):
+def register_circuit_class(
+    circuitClass: type[EquivalentCircuitModel], circuit_name: str
+):
     circuit_name = circuit_name.strip()  # ignore any accidental whitespace
     if circuit_name in CIRCUIT_NAME_TO_CIRCUIT.keys():
         raise ValueError(f"Circuit name '{circuit_name}' is already defined")
     if circuitClass in CIRCUIT_NAME_TO_CIRCUIT.values():
         _reverse = {val: key for key, val in CIRCUIT_NAME_TO_CIRCUIT.items()}
         existing_key = _reverse[circuitClass]
-        raise ValueError(f"Circuit class '{circuitClass.__name__}' is already registered under name '{existing_key}'")
+        raise ValueError(
+            f"Circuit class '{circuitClass.__name__}' is already registered under name '{existing_key}'"
+        )
 
     CIRCUIT_NAME_TO_CIRCUIT[circuit_name] = circuitClass
 
@@ -59,7 +59,10 @@ def circuit_class_from_str(circuit_name: str) -> type[EquivalentCircuitModel]:
 
 
 def parse_circuit_params_from_str(params_str: str) -> Dict[str, float]:
-    return {item.split(":")[0].strip(): float(item.split(":")[1].strip()) for item in params_str.split(",")}
+    return {
+        item.split(":")[0].strip(): float(item.split(":")[1].strip())
+        for item in params_str.split(",")
+    }
 
 
 def circuit_params_dict_to_str(params: Dict[str, float]) -> str:
@@ -89,7 +92,7 @@ def str2complexarray(arr_str: str):
 
 
 def dataframe_from_eis_data_zip(zipped_df_path: str) -> pd.DataFrame:
-    """ Reads the zip file of EIS data into a pandas dataframe
+    """Reads the zip file of EIS data into a pandas dataframe
 
     Args:
         zipped_df_path (str): path to zipfile of EIS data
@@ -107,7 +110,7 @@ def dataframe_from_eis_data_zip(zipped_df_path: str) -> pd.DataFrame:
 
 
 def eis_dataframe_from_csv(csv_path) -> pd.DataFrame:
-    """ Reads a CSV file of EIS data into a pandas dataframe
+    """Reads a CSV file of EIS data into a pandas dataframe
 
     Args:
         csv_df_path (File-Like-Object): path to file of, or buffer of, EIS data in CSV format
@@ -121,11 +124,13 @@ def eis_dataframe_from_csv(csv_path) -> pd.DataFrame:
     """
     df = pd.read_csv(csv_path, index_col=0)
 
-    def real2array(arraystr: str) -> np.ndarray[Any, np.dtype[np.complex_]]:
+    def real2array(arraystr: str) -> np.ndarray:
         return np.array([float(c.strip("[]")) for c in arraystr.split(", ")])
 
-    def comp2array(arraystr: str) -> np.ndarray[Any, np.dtype[np.complex_]]:
-        return np.array([complex(c.strip("[]").replace(" ", "")) for c in arraystr.split(", ")])
+    def comp2array(arraystr: str) -> np.ndarray:
+        return np.array(
+            [complex(c.strip("[]").replace(" ", "")) for c in arraystr.split(", ")]
+        )
 
     if "freq" in df.columns:
         df["freq"] = df["freq"].apply(real2array)
@@ -135,8 +140,8 @@ def eis_dataframe_from_csv(csv_path) -> pd.DataFrame:
     return df
 
 
-def eis_dataframe_to_csv(df, path: FilePath) -> None:
-    """ Writes a pandas dataframe of EIS data into a CSV with the expected format
+def eis_dataframe_to_csv(df: pd.DataFrame, path) -> None:
+    """Writes a pandas dataframe of EIS data into a CSV with the expected format
 
     Args:
         df (pd.DataFrame): DataFrame of EIS data. Frequence and Impedance columns optional.

@@ -6,7 +6,9 @@ class TestCircuitFitting:
     eis_data = eis_dataframe_from_csv("train_data.csv")
 
     def test_l_r_rcpe_rcpe_rcpe(self):
-        sample = self.eis_data.loc[self.eis_data.Circuit == "L-R-RCPE-RCPE-RCPE"].iloc[0]
+        sample = self.eis_data.loc[self.eis_data.Circuit == "L-R-RCPE-RCPE-RCPE"].iloc[
+            0
+        ]
         frequencies = sample.freq
         impedances = sample.Z
         circuit = ECM_from_raw_strings(sample.Circuit, sample.Parameters)
@@ -61,7 +63,9 @@ class TestCircuitFitting:
         assert len(params_after_fit) == len(params_before_fit)
 
     def test_rcpe_rcpe_rcpe_rcpe(self):
-        sample = self.eis_data.loc[self.eis_data.Circuit == "RCPE-RCPE-RCPE-RCPE"].iloc[0]
+        sample = self.eis_data.loc[self.eis_data.Circuit == "RCPE-RCPE-RCPE-RCPE"].iloc[
+            0
+        ]
         frequencies = sample.freq
         impedances = sample.Z
         circuit = ECM_from_raw_strings(sample.Circuit, sample.Parameters)

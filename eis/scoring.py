@@ -13,8 +13,7 @@ from multiprocessing import Pool
 
 
 def ECM_class_classification_scorer(
-    circuit_labels_actual,
-    circuit_labels_prediction
+    circuit_labels_actual, circuit_labels_prediction
 ) -> float:
     encoder = LabelEncoder()
     actual = encoder.fit_transform(circuit_labels_actual)
@@ -32,7 +31,9 @@ def _score_a_circuit(circuit, eis) -> float:
 
 
 def ECM_params_initial_guess_scorer(
-    actual_EISata: pd.DataFrame, predicted_circuits_params: pd.DataFrame, n_cpus: Optional[int]
+    actual_EISata: pd.DataFrame,
+    predicted_circuits_params: pd.DataFrame,
+    n_cpus: Optional[int],
 ) -> float:
     pool = Pool(processes=n_cpus)
 
@@ -55,7 +56,7 @@ def circuit_rmse_score(
     frequencies: np.ndarray[Any, np.dtype[np.float_]],
     impedances: np.ndarray[Any, np.dtype[np.complex_]],
 ) -> float:
-    """ A basic RMSE score of simulated impedance accuracies if you want that
+    """A basic RMSE score of simulated impedance accuracies if you want that
 
     Args:
         circuit (EquivalentCircuitModel): the circuit we're scoring
@@ -76,10 +77,10 @@ def circuit_CV_optimized_score(
     cv_folds: int = 3,
     max_penalty: float = 1e3,
 ) -> float:
-    """ Offical competition scoring metric. Used to evaluate how good a set of initial parameter guesses for a circuit
+    """Offical competition scoring metric. Used to evaluate how good a set of initial parameter guesses for a circuit
     are. Does this by taking Cross Validation folds of the frequency and impedance data before the circuit is fit, then
     scoring the circuit on the data points which were not used in the fitting process.
-    
+
     Final score is the absolute value of the complex RMSE of the out-of-bag data.
 
     Competition scoring will be done using default arguments.
@@ -118,14 +119,18 @@ def circuit_CV_optimized_score(
         except RuntimeError as re:
             err_text = repr(re)
             if "Optimal parameters not found" in err_text:
-                cv_scores = np.concatenate((cv_scores, np.array([complex(max_penalty)])))
+                cv_scores = np.concatenate(
+                    (cv_scores, np.array([complex(max_penalty)]))
+                )
                 logging.debug("A CV fit was unable to converge")
             else:
                 raise re
         except ValueError as ve:
             err_text = repr(ve)
             if "is not within the trust region." in err_text:
-                cv_scores = np.concatenate((cv_scores, np.array([complex(max_penalty)])))
+                cv_scores = np.concatenate(
+                    (cv_scores, np.array([complex(max_penalty)]))
+                )
                 logging.debug("A CV fit was unable to converge")
             else:
                 raise ValueError(
@@ -153,15 +158,24 @@ if __name__ == "__main__":
     from sys import stderr
     import json
 
-    parser = ArgumentParser(description="Submission Scoring CLI. Takes submission and test data and returns metrics.")
-    parser.add_argument(
-        "submission_file", type=str, help="Path to submission file CSV for scoring",
+    parser = ArgumentParser(
+        description="Submission Scoring CLI. Takes submission and test data and returns metrics."
     )
     parser.add_argument(
-        "answers_file", type=str, help="Path to answer data file CSV for scoring",
+        "submission_file",
+        type=str,
+        help="Path to submission file CSV for scoring",
     )
     parser.add_argument(
-        "scoring_mode", type=str, help="Scoring mode", choices=["circuits", "parameters", "both"],
+        "answers_file",
+        type=str,
+        help="Path to answer data file CSV for scoring",
+    )
+    parser.add_argument(
+        "scoring_mode",
+        type=str,
+        help="Scoring mode",
+        choices=["circuits", "parameters", "both"],
     )
     parser.add_argument(
         "--n_cpus",
@@ -173,26 +187,43 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.n_cpus is not None and args.n_cpus > cpu_count():
-        raise ValueError(f"can't ask for a more cpus than you have, and you only have {cpu_count()}")
+        raise ValueError(
+            f"can't ask for more cpus than you have, and you only have {cpu_count()}"
+        )
 
     submission = eis_dataframe_from_csv(args.submission_file)
     answers = eis_dataframe_from_csv(args.answers_file)
 
     if args.scoring_mode == "circuits":
-        accuracy = ECM_class_classification_scorer(answers["Circuit"], submission["Circuit"])
+        accuracy = ECM_class_classification_scorer(
+            answers["Circuit"], submission["Circuit"]
+        )
         print(json.dumps({"accuracy": accuracy}))
         exit
 
     if args.scoring_mode == "parameters":
-        print("Fitting parameters may take a minute, be patient...", file=stderr, flush=True)
-        param_fit_loss = ECM_params_initial_guess_scorer(answers, submission, args.n_cpus)
+        print(
+            "Fitting parameters may take a minute, be patient...",
+            file=stderr,
+            flush=True,
+        )
+        param_fit_loss = ECM_params_initial_guess_scorer(
+            answers, submission, args.n_cpus
+        )
         print(json.dumps({"param_fit_loss": param_fit_loss}))
         exit
 
     if args.scoring_mode == "both":
-        print("Fitting parameters may take a minute, be patient...", file=stderr, flush=True)
-        accuracy = ECM_class_classification_scorer(answers["Circuit"], submission["Circuit"])
-        param_fit_loss = ECM_params_initial_guess_scorer(answers, submission, args.n_cpus)
+        print(
+            "Fitting parameters may take a minute, be patient...",
+            file=stderr,
+            flush=True,
+        )
+        accuracy = ECM_class_classification_scorer(
+            answers["Circuit"], submission["Circuit"]
+        )
+        param_fit_loss = ECM_params_initial_guess_scorer(
+            answers, submission, args.n_cpus
+        )
         print(json.dumps({"accuracy": accuracy, "param_fit_loss": param_fit_loss}))
         exit
-
