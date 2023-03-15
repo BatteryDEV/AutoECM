@@ -25,6 +25,9 @@
 results/clf/cnn/*
 !results/clf/cnn/2022-09-29_19-22-57/
 !results/clf/cnn/2023-03-14_12-29-00/
+results/clf/cnn/2023-03-14_12-29-00/**/*.h5
+results/clf/cnn/2023-03-14_12-29-00/**/*.eps
+results/clf/cnn/2023-03-14_12-29-00/**/*.jpg
 
 results/clf/rf/*
 !results/clf/rf/2023-01-26_10-37-20/

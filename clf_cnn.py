@@ -24,7 +24,7 @@ import tensorflow as tf
 from tensorflow import keras
 from keras.layers import BatchNormalization
 
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, classification_report
 from sklearn.preprocessing import LabelEncoder
 
 import json
@@ -229,6 +229,61 @@ def main(
     return
 
 
+def calculate_stats_multiple_run(output_dir: str, nb_runs: int) -> pd.DataFrame:
+    """Calculate stats for multiple runs of the CNN model."""
+    y_pred = []
+    class_reports = []
+
+    test_ds = tf.keras.utils.image_dataset_from_directory(
+        "data/images/test",
+        validation_split=None,
+        seed=42,
+        image_size=input_shape,
+        batch_size=2000,
+        label_mode="categorical",
+        shuffle=False,
+        color_mode="grayscale",
+    )
+    for image_batch, labels_batch in test_ds:
+        y_test = np.array(labels_batch)
+    Y_test = np.argmax(y_test, 1)
+
+    for i in range(nb_runs):
+        # read y_pred from file
+        output_dir_ = f"{output_dir}/{i}/"
+        y_pred_i = np.loadtxt(f"{output_dir_}/pred_test.txt")
+        y_pred.append(y_pred_i)
+        report_dict = classification_report(Y_test, y_pred_i, output_dict=True)
+        class_reports.append(pd.DataFrame(report_dict))
+    y_pred = np.array(y_pred)
+
+    cnn_stats = pd.DataFrame(
+        columns=[
+            "macro avg mean",
+            "macro avg std",
+            "weighted avg mean",
+            "weighted avg std",
+        ],
+        index=["recall", "f1-score"],
+    )
+    recalls_mavg = [class_reports[i].loc["recall", "macro avg"] for i in range(nb_runs)]
+    recalls_wavg = [
+        class_reports[i].loc["recall", "weighted avg"] for i in range(nb_runs)
+    ]
+    f1s_mavg = [class_reports[i].loc["f1-score", "macro avg"] for i in range(nb_runs)]
+    f1s_wavg = [class_reports[i].loc["f1-score", "weighted avg"] for i in range(nb_runs)]
+    cnn_stats.loc["recall", "macro avg mean"] = np.mean(recalls_mavg)
+    cnn_stats.loc["recall", "macro avg std"] = np.std(recalls_mavg)
+    cnn_stats.loc["f1-score", "macro avg mean"] = np.mean(f1s_mavg)
+    cnn_stats.loc["f1-score", "macro avg std"] = np.std(f1s_mavg)
+    cnn_stats.loc["recall", "weighted avg mean"] = np.mean(recalls_wavg)
+    cnn_stats.loc["recall", "weighted avg std"] = np.std(recalls_wavg)
+    cnn_stats.loc["f1-score", "weighted avg mean"] = np.mean(f1s_wavg)
+    cnn_stats.loc["f1-score", "weighted avg std"] = np.std(f1s_wavg)
+
+    return cnn_stats
+
+
 if __name__ == "__main__":
     input_shape = (58, 58)
     nb_classes = 9
@@ -247,7 +302,7 @@ if __name__ == "__main__":
         os.mkdir(output_dir)
 
         main(input_shape, nb_classes, output_dir, adaptive_based_on_val)
-    if 0:
+    else:
         now = datetime.datetime.now()
         now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
         output_dir = f"results/clf/cnn/{now_str}"
@@ -255,27 +310,13 @@ if __name__ == "__main__":
         for i in range(nb_runs):
             print(f"Run {i} of {nb_runs}")
             output_dir_ = f"{output_dir}/{i}"
-            os.mkdir(output_dir)
+            os.mkdir(output_dir_)
             main(input_shape, nb_classes, output_dir_, adaptive_based_on_val)
 
-    # Extract mean and std of the results of all files.
-    # Calculate the mean confusion matrx inlcluding std and save it
-
-    if 1:
+        # The cnn_stats from 30 runs are very similar to the ones from the run shown in the paper
         output_dir = f"results/clf/cnn/2023-03-14_12-29-00"
-        y_pred = []
-        class_reports = []
-        for i in range(nb_runs):
-            # read y_pred from file
-            output_dir_ = f"{output_dir}/{i}/"
-            y_pred.append(np.loadtxt(f"{output_dir_}/pred_test.txt"))
-            class_reports.append()
-        y_pred = np.array(y_pred)
+        cnn_stats = calculate_stats_multiple_run(output_dir, nb_runs)
+        print(cnn_stats)
 
-        # save numpy array as txt file
-        from numpy import asarray
-        from numpy import savetxt
-
-        #
-
+    # Delete all f
     print("Done")
