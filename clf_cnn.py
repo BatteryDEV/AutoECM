@@ -302,7 +302,7 @@ if __name__ == "__main__":
         os.mkdir(output_dir)
 
         main(input_shape, nb_classes, output_dir, adaptive_based_on_val)
-    else:
+    if 0:
         now = datetime.datetime.now()
         now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
         output_dir = f"results/clf/cnn/{now_str}"
@@ -314,9 +314,9 @@ if __name__ == "__main__":
             main(input_shape, nb_classes, output_dir_, adaptive_based_on_val)
 
         # The cnn_stats from 30 runs are very similar to the ones from the run shown in the paper
-        output_dir = f"results/clf/cnn/2023-03-14_12-29-00"
+        # output_dir = f"results/clf/cnn/2023-03-14_12-29-00"
         cnn_stats = calculate_stats_multiple_run(output_dir, nb_runs)
         print(cnn_stats)
 
-    # Delete all f
+    # Delete all
     print("Done")
