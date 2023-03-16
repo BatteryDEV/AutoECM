@@ -21,7 +21,7 @@ def baseline_model(
     test_data_file: str,
     output_dir: str,
     compare_models: bool = True,
-    cross_val: Literal[None, "simple", "extended"] = None,
+    cross_val: Optional[Literal["simple", "extended"]] = None,
     save: bool = False,
 ) -> None:
 
