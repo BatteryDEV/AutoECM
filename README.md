@@ -52,7 +52,10 @@ We welcome any further contributions to this repository. If you find bucks or ar
 
 This repository contains EIS spectra provided by QuantumScape, capturing about ten years of R&D.
 The dataset consists of labeled data (~10k spectra). This means spectra with an associated Equivalent Circuit Model (ECM) with parameters estimated by Quantum Scape engineers.
-Furthermore, the repository contains unlabeled spectra (~19k spectra). We thank Tim Holme from Quantum Scape for providing this dataset.
+The labeled dataset is split into training and test dataset: `data/train_data.csv` and `data/test_data.csv`
+Furthermore, the repository contains unlabeled spectra (~19k spectra): `data/unlabeled_data.csv`. 
+The data in this article is shared under the terms of the CC-BY 4.0 license according to the file `data\LICENSE`.
+We thank Tim Holme from Quantum Scape for providing this dataset.
 
 ## License
 
