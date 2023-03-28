@@ -70,7 +70,7 @@ If you use code from this repositroy for your work, please cite:
   author = {Schaeffer, Joachim and Gasper, Paul and Garcia-Tamayo, Esteban and Gasper, Raymond and Adachi, Masaki and Gaviria-Cardona, Juan Pablo and Montoya-Bedoya, Simon and Bhutani, Anoushka and Schiek, Andrew and Goodall, Rhys and Findeisen, Rolf and Braatz, Richard D. and Engelke, Simon},  
   keywords = {Machine Learning (cs.LG), Materials Science (cond-mat.mtrl-sci), FOS: Computer and information sciences, FOS: Computer and information sciences, FOS: Physical sciences, FOS: Physical sciences, 68T10},  
   title = {Machine learning benchmarks for the classification of equivalent circuit models from solid-state electrochemical impedance spectra},  
-  note = {arXiv preprint, https://arxiv.org/abs/2302.03362},  
+  note = {arXiv preprint, https://arxiv.org/abs/2302.03362 },  
   eprint	= {2302.03362},  
   archiveprefix = {arXiv},  
   doi = {10.48550/ARXIV.2302.03362},  
