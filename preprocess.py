@@ -3,14 +3,11 @@ import pandas as pd
 import json
 import os
 from tsfresh.transformers import RelevantFeatureAugmenter
-from tsfresh.transformers import FeatureAugmenter
 from tsfresh.feature_extraction import ComprehensiveFCParameters
 from sklearn.preprocessing import LabelEncoder
 from utils_preprocessing import preprocess_data
-from utils_preprocessing import unwrap_df
-from utils_preprocessing import exclude_outlier
-from utils_preprocessing import process_batch_element_params_str
-from utils_preprocessing import process_batch_element_params
+from utils_preprocessing import unwrap_df, unwrap_z, eis_dataframe_from_csv
+from utils_preprocessing import filter_df
 
 
 def extract_tsfresh(
@@ -18,15 +15,10 @@ def extract_tsfresh(
     df_test: pd.DataFrame,
     output_path: str,
     le: LabelEncoder,
-    if_exclude_outlier: bool = False,
 ):
     """Extracts the tsfresh features from the raw data and saves them to a file."""
-
-    if if_exclude_outlier:
-        df, df_test = exclude_outlier(df, df_test)
-        output_path = output_path.replace(".", "ou.")
-
-    # Resulting dataframes do not have labels! They only contain the id, freq, z_real, z_imag columns!
+    # Resulting dataframes do not have labels!
+    # They only contain the id, freq, z_real, z_imag columns!
     df_ts = unwrap_df(df)
     df_ts_test = unwrap_df(df_test)
 
@@ -67,17 +59,9 @@ def extract_tsfresh(
 
 
 def extract_raw_interpolated(
-    df: pd.DataFrame,
-    df_test: pd.DataFrame,
-    output_path: str,
-    le: LabelEncoder,
-    if_exclude_outlier: bool = False,
+    df: pd.DataFrame, df_test: pd.DataFrame, output_path: str, le: LabelEncoder
 ):
     """Extracts the raw interpolated spectra from the raw data and saves them to a file."""
-
-    if if_exclude_outlier:
-        df, df_test = exclude_outlier(df, df_test)
-        output_path = output_path.replace(".csv", "_ourem.csv")
 
     df_y = pd.Series(data=(le.transform(df["Circuit"])), index=df.index)
     df_y_test = pd.Series(data=(le.transform(df_test["Circuit"])), index=df_test.index)
@@ -85,10 +69,10 @@ def extract_raw_interpolated(
     # Exctract the spectra
     X_train = np.zeros((len(df), 2 * len(df.zimag[0])))
     X_test = np.zeros((len(df_test), 2 * len(df_test.zimag[0])))
-    for i in range(len(df)):
-        X_train[i, :] = np.concatenate((df.zreal[i], -df.zimag[i]))
-    for i in range(len(df_test)):
-        X_test[i, :] = np.concatenate((df_test.zreal[i], -df_test.zimag[i]))
+    for i, ind in enumerate(df.index):
+        X_train[i, :] = np.concatenate((df.zreal[ind], -df.zimag[ind]))
+    for i, ind in enumerate(df_test.index):
+        X_test[i, :] = np.concatenate((df_test.zreal[ind], -df_test.zimag[ind]))
 
     data_train = np.concatenate((X_train, np.array(df_y).reshape(-1, 1)), axis=1)
     data_test = np.concatenate((X_test, np.array(df_y_test).reshape(-1, 1)), axis=1)
@@ -110,11 +94,11 @@ def plot_eis_nyquist_individual(
 
     nb_spectra = len(df)
     # nb_spectra = 1
-    for i in range(nb_spectra):
+    for i, ind in enumerate(df.index):
         fig, ax = plt.subplots(figsize=(2, 2), dpi=64, frameon=False)
 
         ax.set_axis_off()
-        ax.plot(df["zreal"][i], -df["zimag"][i], linewidth=3, color="black")
+        ax.plot(df.loc[ind]["zreal"], -df.loc[ind]["zimag"], linewidth=3, color="black")
 
         # Approach to encode the frequency as a colour
         # real=df['zreal'][i]
@@ -131,15 +115,15 @@ def plot_eis_nyquist_individual(
         plt.tight_layout()
         try:
             plt.savefig(
-                f'{path}{name}/{df["Circuit"][i]}/{i}.png',
+                f'{path}{name}/{df.loc[ind]["Circuit"]}/{ind}.png',
                 dpi=64,
                 bbox_inches="tight",
                 pad_inches=0,
             )
-        except:
-            os.makedirs(f'{path}{name}/{df["Circuit"][i]}')
+        except FileNotFoundError:
+            os.makedirs(f'{path}{name}/{df.loc[ind]["Circuit"]}')
             plt.savefig(
-                f'{path}{name}/{df["Circuit"][i]}/{i}.png',
+                f'{path}{name}/{df.loc[ind]["Circuit"]}/{ind}.png',
                 dpi=64,
                 bbox_inches="tight",
                 pad_inches=0,
@@ -167,15 +151,41 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     plt.ion()
+
+    # Select the data processing steps to run
+    filter_raw_csv = True
+
+    process_raw = False
+    process_tsfresh = True
+    process_images = False
+
     train_data_fname = "data/train_data.csv"
     test_data_fname = "data/test_data.csv"
+    train_data_filter_fname = "data/train_data_filtered.csv"
+    test_data_filter_fname = "data/test_data_filtered.csv"
+
     output_path_tsfresh = "data/tsfresh/train_tsfresh.csv"
-    output_path_raw = "data/interpolated/train_data_inter.csv"
+    output_path_raw = "data/interpolated/train_data.csv"
+
     output_path_cnn = "data/images/"
     le_path = "data/le_name_mapping.json"
 
+    if filter_raw_csv:
+        df = unwrap_z(eis_dataframe_from_csv("data/train_data.csv"))
+        df_test = unwrap_z(eis_dataframe_from_csv("data/test_data.csv"))
+        df, df_test = filter_df(df, df_test, plot_outliers=True)
+        df_raw_train = pd.read_csv(train_data_fname, index_col=0)
+        df_raw_test = pd.read_csv(test_data_fname, index_col=0)
+        df_raw_train_ = df_raw_train.loc[df.index].copy()
+        df_raw_test_ = df_raw_test.loc[df_test.index].copy()
+        df_raw_train_.to_csv(train_data_filter_fname, index=True)
+        df_raw_test_.to_csv(test_data_filter_fname, index=True)
+
     df = preprocess_data(train_data_fname)
     df_test = preprocess_data(test_data_fname)
+
+    df_filter = preprocess_data(train_data_filter_fname)
+    df_test_filter = preprocess_data(test_data_filter_fname)
 
     # Load label encoder
     with open(le_path, "r") as f:
@@ -194,14 +204,28 @@ if __name__ == "__main__":
     mapping["classes"] = [mapping[str(int(i))] for i in range(9)]
     le.classes_ = np.array(mapping["classes"])
 
-    # Extract features, by uncommenting the function you want to use
-    print("Preprocessing data...")
-    extract_raw_interpolated(df, df_test, output_path_raw, le, if_exclude_outlier=True)
-
-    # print("Preprocessing data tsfresh...")
-    # extract_tsfresh(df, df_test,  output_path_tsfresh, if_exclude_outlier=False)
-    # extract_tsfresh(df, df_test,  output_path_tsfresh, if_exclude_outlier=True)
-    # print("Preprocessing data images...")
-    # transform_data_to_images(df, df_test, output_path_cnn, plot_spectra=True)
+    if process_raw:
+        print("Preprocessing data...")
+        extract_raw_interpolated(df, df_test, output_path_raw, le)
+        extract_raw_interpolated(
+            df_filter, df_test_filter, output_path_raw.replace(".", "_filtered."), le
+        )
+    if process_tsfresh:
+        print("Preprocessing data tsfresh...")
+        extract_tsfresh(df, df_test, output_path_tsfresh, le)
+        extract_tsfresh(
+            df_filter,
+            df_test_filter,
+            output_path_tsfresh.replace(".", "_filtered."),
+            le,
+        )
+    if process_images:
+        print("Preprocessing data images...")
+        transform_data_to_images(df, df_test, output_path_cnn)
+        transform_data_to_images(
+            df_filter,
+            df_test_filter,
+            output_path_cnn.replace("images", "images_filtered"),
+        )
 
     print("Done.")

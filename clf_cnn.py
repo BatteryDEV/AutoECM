@@ -9,16 +9,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import datetime
 import os
+import sys
 
 from typing import Tuple
 
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix
-
-import keras
 from keras.models import Sequential
-from keras.layers import Conv2D, Lambda, MaxPooling2D, Rescaling  # convolution layers
-from keras.layers import Dense, Dropout, Flatten  # core layers
+from keras.layers import Conv2D, MaxPooling2D, Rescaling  # convolution layers
+from keras.layers import Dense, Flatten  # core layers
 
 import tensorflow as tf
 from tensorflow import keras
@@ -84,9 +81,25 @@ def cnn_architecture(
             loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
         )
     else:
-        ada_delta_ = keras.optimizers.Adadelta(lr=1, rho=0.95, epsilon=1e-08, decay=0.03)
+        optimizer_adamax = tf.keras.optimizers.Adamax(
+            learning_rate=0.001,
+            beta_1=0.9,
+            beta_2=0.999,
+            epsilon=1e-07,
+            weight_decay=None,
+            clipnorm=None,
+            clipvalue=None,
+            global_clipnorm=None,
+            use_ema=False,
+            ema_momentum=0.99,
+            ema_overwrite_frequency=None,
+            jit_compile=True,
+        )
+
         model.compile(
-            loss="categorical_crossentropy", optimizer=ada_delta_, metrics=["accuracy"]
+            loss="categorical_crossentropy",
+            optimizer=optimizer_adamax,
+            metrics=["accuracy"],
         )
 
     model.summary()
@@ -100,7 +113,7 @@ def train_model(
     if adaptive_based_on_val:
         es = keras.callbacks.EarlyStopping(
             monitor="val_accuracy",  # metrics to monitor
-            patience=10,  # how many epochs before stop
+            patience=60,  # how many epochs before stop
             verbose=1,
             mode="max",  # we need the maximum accuracy.
             restore_best_weights=True,  #
@@ -124,19 +137,20 @@ def train_model(
         # )
         # h = model.fit(val_ds, epochs=5)
     else:
-        h = model.fit(train_ds, epochs=140)
+        h = model.fit(train_ds, epochs=150)
     return h, model
 
 
 def main(
     input_shape: Tuple[int, int],
     nb_classes: int = 9,
+    input_dir: str = "",
     output_dir: str = "",
     adaptive_based_on_val: bool = True,
 ) -> None:
     if adaptive_based_on_val:
         train_ds = tf.keras.utils.image_dataset_from_directory(
-            "data/images/train",
+            f"{input_dir}/train",
             validation_split=0.1,
             subset="training",
             seed=20,
@@ -147,7 +161,7 @@ def main(
         )
 
         val_ds = tf.keras.utils.image_dataset_from_directory(
-            "data/images/train",
+            f"{input_dir}/train",
             validation_split=0.1,
             subset="validation",
             seed=20,
@@ -159,7 +173,7 @@ def main(
         )
     else:
         train_ds = tf.keras.utils.image_dataset_from_directory(
-            "data/images/train",
+            f"{input_dir}/train",
             seed=42,
             image_size=input_shape,
             label_mode="categorical",
@@ -170,7 +184,7 @@ def main(
         val_ds = np.nan
 
     test_ds = tf.keras.utils.image_dataset_from_directory(
-        "data/images/test",
+        f"{input_dir}/test",
         validation_split=None,
         seed=42,
         image_size=input_shape,
@@ -229,13 +243,15 @@ def main(
     return
 
 
-def calculate_stats_multiple_run(output_dir: str, nb_runs: int) -> pd.DataFrame:
+def calculate_stats_multiple_run(
+    input_dir: str, output_dir: str, nb_runs: int, input_shape: Tuple[int, int]
+) -> pd.DataFrame:
     """Calculate stats for multiple runs of the CNN model."""
     y_pred = []
     class_reports = []
 
     test_ds = tf.keras.utils.image_dataset_from_directory(
-        "data/images/test",
+        f"{input_dir}/test",
         validation_split=None,
         seed=42,
         image_size=input_shape,
@@ -285,38 +301,49 @@ def calculate_stats_multiple_run(output_dir: str, nb_runs: int) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    input_shape = (58, 58)
-    nb_classes = 9
+    # print the tensor flow version
+    print(tf.__version__)
+    if len(sys.argv) < 2:
+        filter = 1
+        runs = 10
+    else:
+        filter = int(sys.argv[1])
+        runs = 1
+    if len(sys.argv) > 2:
+        runs = int(sys.argv[2])
+
+    print(f"Filter: {filter}")
+    print(f"Repeating the training {runs} times.")
+
+    now = datetime.datetime.now()
+    now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
+    if filter:
+        input_dir = "data/images_filtered"
+        output_dir = f"results/clf_filtered/cnn/{now_str}"
+    else:
+        input_dir = "data/images"
+        output_dir = f"results/clf/cnn/{now_str}"
+    os.mkdir(output_dir)
     # if False, then uses ada_delta with decay, else uses stopping and decay based on val_acc
     adaptive_based_on_val = True
     # If true, the model will be trained nb_runs times and the results will be saved in a folder
     # This is useful to assess randomness in the model which can come from GPU usage
-    single_run = False
-    nb_runs = 30
 
+    input_shape = (58, 58)
+    nb_classes = 9
     # Create new folder with results, name is datetime
-    if single_run:
-        now = datetime.datetime.now()
-        now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
-        output_dir = f"results/clf/cnn/{now_str}"
-        os.mkdir(output_dir)
-
-        main(input_shape, nb_classes, output_dir, adaptive_based_on_val)
-    if 0:
-        now = datetime.datetime.now()
-        now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
-        output_dir = f"results/clf/cnn/{now_str}"
-        os.mkdir(output_dir)
-        for i in range(nb_runs):
-            print(f"Run {i} of {nb_runs}")
+    if runs == 1:
+        main(input_shape, nb_classes, input_dir, output_dir, adaptive_based_on_val)
+    else:
+        for i in range(runs):
+            print(f"Run {i+1} of {runs}")
             output_dir_ = f"{output_dir}/{i}"
             os.mkdir(output_dir_)
-            main(input_shape, nb_classes, output_dir_, adaptive_based_on_val)
+            main(input_shape, nb_classes, input_dir, output_dir_, adaptive_based_on_val)
 
-        # The cnn_stats from 30 runs are very similar to the ones from the run shown in the paper
-        # output_dir = f"results/clf/cnn/2023-03-14_12-29-00"
-        cnn_stats = calculate_stats_multiple_run(output_dir, nb_runs)
+        cnn_stats = calculate_stats_multiple_run(input_dir, output_dir, runs, input_shape)
         print(cnn_stats)
+        # Save cnn_stats
+        cnn_stats.to_csv(f"{output_dir}/cnn_stats.txt", sep="\t")
 
-    # Delete all
     print("Done")

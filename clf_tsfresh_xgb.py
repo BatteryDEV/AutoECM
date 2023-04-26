@@ -6,13 +6,11 @@ import matplotlib.pyplot as plt
 import xgboost as xgb
 import scipy.stats as stats
 from sklearn.utils.fixes import loguniform
-from typing import Literal
-
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, cross_val_score
-import pickle
 import datetime
 import os
+import sys
 from utils import shap_feature_analysis, plot_cm, calcualte_classification_report
 
 plt.ion()
@@ -73,62 +71,35 @@ def hyperparameter_optimization(
     if cross_val is not None:
         if cross_val == "grid":
             # Grid search implementation.
-            # best parameters set found on training set:
-            # {'colsample_bylevel': 0.4, 'colsample_bytree': 1.0,
-            # 'learning_rate': 0.1, 'max_depth': 20, 'n_estimators': 600, 'subsample': 0.75
-            # accuracy                              0.5256      1857
-            # macro avg         0.5432    0.5499    0.5450      1857
-            # weighted avg      0.5139    0.5256    0.5181      1857
-            # model = xgb.XGBClassifier(
-            #    random_state=42, n_jobs=-1,
-            #    colsample_bylevel = 0.4, colsample_bytree = 1.0,
-            #    learning_rate = 0.1, max_depth = 20,
-            #    n_estimators = 600, subsample = 0.75)
             parameters = {
-                "max_depth": [3, 10, 20],
-                "learning_rate": [0.1, 0.25, 0.4],
+                "max_depth": [5, 10, 20],
+                "learning_rate": [0.1, 0.25],
                 "subsample": [0.5, 0.75, 1.0],
-                "colsample_bytree": [0.4, 0.75, 1.0],
-                "colsample_bylevel": [0.4, 0.75, 1.0],
-                "n_estimators": [100, 500, 600],
+                "colsample_bytree": [0.5, 0.75, 1.0],
+                "n_estimators": [100, 375, 600],
             }
 
             clf = xgb.XGBClassifier(random_state=42)
-            # Does that exist fo xgb?
-            # class_weight='balanced_subsample', max_depth=None, random_state=42)
             clf_s = GridSearchCV(
                 clf, parameters, scoring="f1_macro", cv=4, n_jobs=-1, verbose=3
             )
 
         if cross_val == "random":
-            # implement random search here to save some time.
-            # best parameters set found on training set:
-            # {'colsample_bylevel': 0.5608103108412998, 'colsample_bytree': 0.8413112527336862,
-            # 'learning_rate': 0.06349394122027266, 'max_depth': 5, 'n_estimators': 898, 'subsample': 0.7620476980111073
-            # accuracy                          0.5186      1857
-            # macro avg     0.5431    0.5422    0.5419      1857
-            # weighted avg  0.5143    0.5186    0.5158      1857
-            # model = xgb.XGBClassifier(
-            #    random_state=42, n_jobs=-1,
-            #    colsample_bylevel = 0.5608103108412998, colsample_bytree = 0.8413112527336862,
-            #    learning_rate = 0.06349394122027266, max_depth = 5,
-            #    n_estimators = 898, subsample = 0.7620476980111073)
-            # Statistically insiginificant improvements over XGB with standard parameters.
             parameters = {
-                "max_depth": stats.randint(1, 20),
-                "learning_rate": loguniform(1e-2, 1e0),
-                "subsample": stats.uniform(0.4, 0.6),
-                "colsample_bytree": stats.uniform(0.4, 0.6),
-                "colsample_bylevel": stats.uniform(0.4, 0.6),
-                "n_estimators": stats.randint(50, 1000),
+                "max_depth": stats.randint(3, 25),
+                "learning_rate": loguniform(1e-2, 0.9),
+                "subsample": stats.uniform(0.3, 0.7),
+                "colsample_bytree": stats.uniform(0.3, 0.7),
+                "colsample_bylevel": stats.uniform(0.3, 0.7),
+                "n_estimators": stats.randint(5, 750),
             }
             clf = xgb.XGBClassifier(random_state=42)
             clf_s = RandomizedSearchCV(
                 clf,
                 param_distributions=parameters,
-                n_iter=60,
+                n_iter=250,
                 scoring="f1_macro",
-                cv=4,
+                cv=5,
                 n_jobs=-1,
                 verbose=3,
             )
@@ -141,18 +112,19 @@ def hyperparameter_optimization(
             with open(f"{output_dir}/best_hyperparameters.txt", "w") as f:
                 f.write(str(clf_s.best_params_))
         tuned_model = clf_s.best_estimator_
+        joblib.dump(clf_s, os.path.join(output_dir, "clf_s.pkl"))
+
     else:
         # tuned model found by previosu run, for comparison
-        tuned_model = xgb.XGBClassifier(
-            random_state=42,
-            n_jobs=-1,
-            colsample_bylevel=0.4,
-            colsample_bytree=1.0,
-            learning_rate=0.1,
-            max_depth=20,
-            n_estimators=600,
-            subsample=0.75,
-        )
+        parameters = {
+            'colsample_bylevel': 0.6918401578850566,
+            'colsample_bytree': 0.5127192475374961,
+            'learning_rate': 0.16527764697961278,
+            'max_depth': 4,
+            'n_estimators': 255,
+            'subsample': 0.862351854582081,
+        }
+        tuned_model = xgb.XGBClassifier(random_state=42, n_jobs=-1, **parameters)
 
     # Compare the tuned model with the default model by using the crossvalidation scores
     # IN the publication: XGB 1.5.0, default parameters: https://xgboost.readthedocs.io/en/latest/parameter.html
@@ -171,11 +143,6 @@ def hyperparameter_optimization(
     print("Tuned model std: ", tuned_model_score.std())
     print("Default model std: ", default_model_score.std())
     print("Comparison done!")
-    # Tuned model score:  0.5438601022759165
-    # Default model score:  0.5430063300012915
-    # Difference:  0.0008537722746250198
-    # Tuned model std:  0.007275628673365595
-    # Default model std:  0.00840176590947259
     return tuned_model
 
 
@@ -211,13 +178,18 @@ def main(
     if save_model:
         joblib.dump(model, f"{output_dir}/model.joblib")
 
-    # Load feature names from json file to list
-    with open("data/tsfresh/feature_names_tsfresh.json", "r") as f:
-        feature_names = json.load(f)
+    # if train_data_f contains filter then load the filtered features
+    if "filtered" in train_data_f:
+        with open("data/tsfresh/feature_names_tsfresh_filtered.json", "r") as f:
+            feature_names = json.load(f)
+    else:
+        # Load feature names from json file to list
+        with open("data/tsfresh/feature_names_tsfresh.json", "r") as f:
+            feature_names = json.load(f)
 
     # Create df from X_test and feature names
     df = pd.DataFrame(X_test, columns=feature_names)
-    shap_feature_analysis(model, df, le, max_display=20, save=save, output_dir=output_dir)
+    shap_feature_analysis(model, df, le, max_display=7, save=save, output_dir=output_dir)
 
     # Calculate f1 and save classification report
     calcualte_classification_report(
@@ -228,25 +200,59 @@ def main(
 
 
 if __name__ == "__main__":
-    remove_outlier = 1
+    if len(sys.argv) < 3:
+        filter = 0
+        cross_val = None
+        # "extended"  # "simple"
+    else:
+        filter = int(sys.argv[1])
+        print(f"Filter: {filter}")
+        cross_val = str(sys.argv[2])
+        print(f"Cross validation: {cross_val}")
+
     le_f = "data/le_name_mapping.json"
     now = datetime.datetime.now()
     now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
-    output_dir = f"results/clf/xgb/{now_str}"
-    os.mkdir(output_dir)
 
-    if remove_outlier:
-        train_data_f = "data/tsfresh/train_tsfresh_ourem.csv"
-        test_data_f = "data/tsfresh/test_tsfresh_ourem.csv"
-        # Save outlier removed variable as txt file
-        with open(f"{output_dir}/outlier_removed.txt", "w") as f:
-            f.write("Outlier removed")
+    if filter:
+        train_data_f = "data/tsfresh/train_tsfresh_filtered.csv"
+        test_data_f = "data/tsfresh/test_tsfresh_filtered.csv"
+        output_dir = f"results/clf_filtered/xgb/{now_str}"
     else:
         train_data_f = "data/tsfresh/train_tsfresh.csv"
         test_data_f = "data/tsfresh/test_tsfresh.csv"
+        output_dir = f"results/clf/xgb/{now_str}"
 
-    # tuned_model = hyperparameter_optimization(le_f, cross_val=None, save_best_params=True, output_dir=output_dir)
+    os.mkdir(output_dir)
+    if cross_val is not None:
+        tuned_model = hyperparameter_optimization(
+            le_f, cross_val=cross_val, save_best_params=True, output_dir=output_dir
+        )
 
-    main(train_data_f, test_data_f, output_dir, le_f, save_model=True, save=True)
+    else:
+        # Tuned model, with random search. The filtered and unfitlered datasets are very similar
+        # thus we are using the hyperparmeter values from the filtered dataset also for the unfiltered dataset.
+        # Key observations from hyperparameter optimization:
+        #   The changes in mode accuracy are relatively small.
+        #   The default xgb model is already very good.
+        parameters = {
+            'colsample_bylevel': 0.6918401578850566,
+            'colsample_bytree': 0.5127192475374961,
+            'learning_rate': 0.16527764697961278,
+            'max_depth': 4,
+            'n_estimators': 255,
+            'subsample': 0.862351854582081,
+        }
+        tuned_model = xgb.XGBClassifier(random_state=42, n_jobs=-1, **parameters)
+
+        main(
+            train_data_f,
+            test_data_f,
+            output_dir,
+            le_f,
+            model=tuned_model,
+            save_model=False,
+            save=True,
+        )
 
     print("Done")
