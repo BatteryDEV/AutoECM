@@ -2,10 +2,10 @@
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
-import matplotlib.pyplot as plt
 import json
-from typing import Optional, Tuple
+from typing import Tuple
 from sklearn.preprocessing import LabelEncoder
+from utils import visualize_raw_spectra
 
 
 def eis_dataframe_from_csv(csv_path) -> pd.DataFrame:
@@ -88,9 +88,9 @@ def process_batch_element_params_str(Parameters):
 def unwrap_df(df: pd.DataFrame) -> pd.DataFrame:
     """Unwraps the frequency column into separate rows for each frequency to use UMAP"""
     df2 = pd.DataFrame(columns=["id", "freq", "zreal", "zimag"])
-    for i in np.arange(df.shape[0]):
-        f, zreal, zimag = df[["f", "zreal", "zimag"]].loc[i]
-        idx = np.tile(i, f.size)
+    for ind in df.index:
+        f, zreal, zimag = df[["f", "zreal", "zimag"]].loc[ind]
+        idx = np.tile(ind, f.size)
         df_ = pd.DataFrame(
             data=(idx, np.log(f), zreal, zimag), index=["id", "freq", "zreal", "zimag"]
         ).T
@@ -100,10 +100,10 @@ def unwrap_df(df: pd.DataFrame) -> pd.DataFrame:
 
 def preprocess_data(file_name: str, num_points: int = 30) -> pd.DataFrame:
     """Preprocesses the data from the CSV filename into a dataframe"""
-    ## Load Training Data
+    # Load Training Data
     df = eis_dataframe_from_csv(file_name)
 
-    ## Interpolate onto the largest frequency union to prevent data leakage
+    # Interpolate onto the largest frequency union to prevent data leakage
     # f_max = df.freq.apply(np.max).min()
     # f_min = df.freq.apply(np.min).max()
     # For the training data f_max is 100.000 and f_min is 10.
@@ -121,138 +121,85 @@ def preprocess_data(file_name: str, num_points: int = 30) -> pd.DataFrame:
     return df
 
 
-def exclude_outlier(
+def get_stats_zreal(df, variable="z_real_mean"):
+    mean = np.mean(df[variable])
+    std = np.std(df[variable])
+    return mean, std
+
+
+def filter_df(
     df_train: pd.DataFrame,
-    df_test: pd.DataFrame,
-    z_mean_std_threshold: list = [8, 8],
-    z_max_std_threshold: list = [10, 10],
-    exclude_max: bool = True,
+    df_test: pd.DataFrame = None,
+    mono_thres=1e-3,
+    plot_outliers: bool = False,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Define limits to exclude the outlier from the training set, apply the limits to the test set
-    This procedure was not used in the final version of the paper, but is included for completeness.
+    """
+    Excludes outliers from the training data and test data if provided
+    The criteria are described in more detail in the associated paper.
 
     Parameters
     ----------
-    df_train: pandas.DataFrame
+    df_train: pd.DataFrame
         Training data
-    df_test: pandas.DataFrame
-        Test data
-    z_mean_std_threshold: list
-        Threshold for the standard deviation of the mean of the real and imaginary part of the impedance
-    z_max_std_threshold: list
-        Threshold for the standard deviation of the maximum of the real and imaginary part of the impedance
-    exclude_max: bool
-        If True, the standard deviation of the maximum of the real and imaginary part of the impedance is used to
-        exclude outliers
+    df_test: pd.DataFrame
+        Test data (Optional)
+    mono_thres: float
+        Threshold for the monotonicity of the real part of the impedance (Default: 1e-3)
+    plot_outliers: bool
+        Plot the outliers (Default: False)
 
-    Return
-    ------
-    df_train: pandas.DataFrame
-        Training data without outliers
-    df_test: pandas.DataFrame
-        Test data without outliers
+    Returns
+    -------
+    df_train: pd.DataFrame
+        Filtered training data
+    df_test: pd.DataFrame
+        Filtered rest data (if provided)
     """
-    real_mean_train = [df_train["zreal"][i].mean() for i in range(len(df_train))]
-    imag_means_train = [df_train["zimag"][i].mean() for i in range(len(df_train))]
-    real_max_val = [np.abs(df_train["zreal"][i]).max() for i in range(len(df_train))]
-    imag_max_val = [np.abs(df_train["zimag"][i]).max() for i in range(len(df_train))]
 
-    real_mean_test = [df_test["zreal"][i].mean() for i in range(len(df_test))]
-    imag_means_test = [df_test["zimag"][i].mean() for i in range(len(df_test))]
-    real_max_val_test = [np.abs(df_test["zreal"][i]).max() for i in range(len(df_test))]
-    imag_max_val_test = [np.abs(df_test["zimag"][i]).max() for i in range(len(df_test))]
+    def is_monotonic(x, thres=mono_thres):
+        return np.all(np.diff(x) <= thres)
 
-    # Define thresholds as 6 standard deviations from the mean based on the training set
-    real_mean_threshold = np.mean(real_mean_train) + z_mean_std_threshold[0] * np.std(
-        real_mean_train
-    )
-    imag_mean_threshold = np.mean(imag_means_train) + z_mean_std_threshold[1] * np.std(
-        imag_means_train
-    )
-    if exclude_max:
-        real_max_val_threshold = np.mean(real_max_val) + z_max_std_threshold[0] * np.std(
-            real_max_val
-        )
-        imag_max_val_threshold = np.mean(imag_max_val) + z_max_std_threshold[0] * np.std(
-            imag_max_val
-        )
+    def filter_single_df(df):
+        index_train = df.index
+        # Rewrite this function!
+        f_, Z_, index_q1 = filter_simple_qc_list(df, neg_real_z_filter=True)
+        index_list_q1 = [i for i in index_train if i in index_q1]
+
+        df_q1 = df.iloc[index_list_q1].copy()
+        z_mono = df_q1["zreal"].apply(lambda x: is_monotonic(x))
+
+        # create a new dataframe with only the spectra that are monotonic
+        df_q1_mono = df_q1[z_mono == 1].copy()
+
+        if plot_outliers:
+            # get the indices of the spectra that are not monotonic
+            index_list_nmono = df_q1[z_mono == 0].index
+            index_list_filtered = [
+                i for i in index_train if i not in index_q1 and i not in index_list_nmono
+            ]
+
+            fig = visualize_raw_spectra(
+                df.loc[index_list_filtered].copy(),
+                show=1,
+                save_figs=0,
+                row_col_ratio=0.6,
+                pdf=True,
+                fig_name="NQ1_filtered_spectra",
+                sup_title="Spectra are not in the first quadrant and did not meet simple QCs, labeled data",
+                axis_off=False,
+            )
+            fig.show()
+        return df_q1_mono
+
+    df_train_filtered = filter_single_df(df_train)
+    print(f"Train data: {len(df_train_filtered)} spectra after outliers removed")
+
+    if df_test is not None:
+        df_test_filtered = filter_single_df(df_test)
+        print(f"Test data: {len(df_test_filtered)} spectra after outliers removed")
+        return df_train_filtered, df_test_filtered
     else:
-        real_max_val_threshold = np.Inf
-        imag_max_val_threshold = np.Inf
-
-    # Get indices of the outliers
-    outliers_train = []
-    outliers_train.extend(np.where(np.array(real_mean_train) > real_mean_threshold)[0])
-    outliers_train.extend(np.where(np.array(imag_means_train) > imag_mean_threshold)[0])
-    outliers_train.extend(np.where(np.array(real_max_val) > real_max_val_threshold)[0])
-    outliers_train.extend(np.where(np.array(imag_max_val) > imag_max_val_threshold)[0])
-    # Get the unique indices
-    outliers_train = np.unique(outliers_train)
-    print(outliers_train)
-
-    # Get the indices of the outliers in the test set
-    outliers_test = []
-    outliers_test.extend(np.where(np.array(real_mean_test) > real_mean_threshold)[0])
-    outliers_test.extend(np.where(np.array(imag_means_test) > imag_mean_threshold)[0])
-    outliers_test.extend(
-        np.where(np.array(real_max_val_test) > real_max_val_threshold)[0]
-    )
-    outliers_test.extend(
-        np.where(np.array(imag_max_val_test) > imag_max_val_threshold)[0]
-    )
-    # Get the unique indices
-    outliers_test = np.unique(outliers_test)
-    print(outliers_test)
-
-    # Exclude the outlier
-    print(f"Train data: {len(df_train)} spectra")
-    df_train_outlier_excluded = df_train.copy()
-    df_train_outlier_excluded = df_train_outlier_excluded.drop(
-        outliers_train
-    ).reset_index(drop=True)
-    print(f"Train data: {len(df_train_outlier_excluded)} spectra after outliers removed")
-
-    print(f"Test data: {len(df_test)} spectra")
-    df_test_outlier_excluded = df_test.copy()
-    df_test_outlier_excluded = df_test_outlier_excluded.drop(outliers_test).reset_index(
-        drop=True
-    )
-    print(f"Test data: {len(df_test_outlier_excluded)} spectra after outliers removed")
-    return df_train_outlier_excluded, df_test_outlier_excluded
-
-
-def plot_all_spectra(
-    df_sorted: pd.DataFrame,
-    fig: Optional[plt.figure] = None,
-    ax: Optional[plt.axes] = None,
-    plot_real: bool = True,
-    save: bool = False,
-    color: str = "k",
-    return_fig: bool = False,
-):
-    """Plot all the spectra in the dataframe"""
-    if ax is None:
-        return_fig = True
-        fig, ax = plt.subplots(figsize=(12, 8))
-    for i in range(len(df_sorted)):
-        if plot_real:
-            ax.plot(df_sorted["f"][i], df_sorted["zreal"][i], color=color, alpha=0.6)
-        else:
-            ax.plot(df_sorted["f"][i], df_sorted["zimag"][i], color=color, alpha=0.6)
-    ax.set_xscale("log")
-    ax.set_xlabel("Frequency (Hz)")
-    if plot_real:
-        ax.set_ylabel("Real(Z)")
-    else:
-        ax.set_ylabel("Imag(Z)")
-    ax.set_title("All Spectra")
-    if save:
-        fig.savefig("figures/all_spectra.png", dpi=300)
-
-    if return_fig:
-        return fig, ax
-    else:
-        plt.show()
+        return df_train_filtered
 
 
 def eis_label_encoder(
@@ -268,3 +215,81 @@ def eis_label_encoder(
     le.classes_ = np.array(mapping["classes"])
 
     return le, mapping
+
+
+def unwrap_z(df):
+    df["zreal"] = df.apply(lambda x: np.real(x.Z), axis=1)
+    df["zimag"] = df.apply(lambda x: np.imag(x.Z), axis=1)
+    return df
+
+
+def sort_circuits(df):
+    # Sort the data frame by circuit.
+    df = df.sort_values(by=["Circuit"])
+    return df
+
+
+def interpolate_to_freq_range(df, interpolated_basis):
+    # Interpolate onto the largest frequency union to prevent data leakage
+
+    df["f"] = df.apply(lambda x: process_batch_element_f(interpolated_basis), axis=1)
+    df["zreal"] = df.apply(
+        lambda x: process_batch_element_zreal(x.freq, x.Z, interpolated_basis), axis=1
+    )
+    df["zimag"] = df.apply(
+        lambda x: process_batch_element_zimag(x.freq, x.Z, interpolated_basis), axis=1
+    )
+    return df
+
+
+def filter_pos_imag(frequencies, Z, neg_real_z_filter=True):
+    """
+    Strategies for filtering out data that is not in the first quadrant.
+    Based on ignoreBelowX function from impedancepy with modifications.
+    """
+    range_pos = np.abs(np.max(-np.imag(Z)))
+    range_neg = np.abs(np.min(-np.imag(Z)))
+    if range_neg > 2 * range_pos:
+        # if the range of the positive imaginary part is less than half the range of the negative imaginary part
+        # then we can assume that the data is not in the first quadrant
+        # and we can filter out the data
+        Z = []
+        frequencies = []
+    elif neg_real_z_filter:
+        # Check whether the real part of the impedance is negative
+        # If so, filter out.
+        if np.any(np.real(Z) < 0):
+            Z = []
+            frequencies = []
+    else:
+        mask = np.imag(Z) < 0
+        frequencies = frequencies[mask]
+        Z = Z[mask]
+    return frequencies, Z
+
+
+def filter_simple_qc_list(
+    df: pd.DataFrame,
+    scale: float = 20e-3,
+    verbose=False,
+    neg_real_z_filter=False,
+):
+    """Convert a dataframe to a two lists f, Z that can be used in impedance.py"""
+    f = df["freq"].values.tolist()
+    Z = df["Z"].values.tolist()
+    f_list = []
+    Z_list = []
+    index_all = df.index
+    index_list = []
+    for i in range(len(Z)):
+        # keep only the impedance data in the first quandrant
+        f_, Z_ = filter_pos_imag(f[i], Z[i], neg_real_z_filter=neg_real_z_filter)
+        # check whether Z_ is empty
+        if len(Z_) <= 10:
+            if verbose:
+                print(f"Empty Z_ at index {i}")
+        else:
+            f_list.append(f_)
+            Z_list.append(Z_)
+            index_list.append(index_all[i])
+    return f_list, Z_list, index_list

@@ -1,5 +1,7 @@
 # Machine Learning-based Classification of Electrochemical Impedance Spectra
 
+### Clarifications regarding the distribution of synthetic and measured impedance spectra in the labelled and unlabeled portion of the data set have been made. 26th of April 2023
+
 This repository contains the code to the corresponding publication:
 "Machine learning benchmarks for the classification of equivalent circuit models from solid-state electrochemical impedance spectra"
 http://arxiv.org/abs/2302.03362
@@ -50,12 +52,14 @@ We welcome any further contributions to this repository. If you find bucks or ar
 
 ## Data
 
-This repository contains EIS spectra provided by QuantumScape, capturing about ten years of R&D.
-The dataset consists of labeled data (~10k spectra). This means spectra with an associated Equivalent Circuit Model (ECM) with parameters estimated by Quantum Scape engineers.
-The labeled dataset is split into training and test dataset: `data/train_data.csv` and `data/test_data.csv`
+QuantumScape (QS) provided the EIS data contained in the repository. The first data set comprises approximately 9,300 synthetic spectra with the associated Equivalent Circuit Model (ECM). 
+The second data set contains approximately 19,000 unlabeled spectra consisting of about 80% synthetic and 20% measured data. 
+The parameter ranges for all synthetic data are informed by the R&D of QS. The measured spectra are from a range of different materials, with some replicate measurements at different temperatures, and/or State-Of-Charge (SOC), and/or State-Of-Health (SOH).
+
+The labeled data set is split into training and test data set: `data/train_data.csv` and `data/test_data.csv`
 Furthermore, the repository contains unlabeled spectra (~19k spectra): `data/unlabeled_data.csv`. 
 The data in this article is shared under the terms of the CC-BY 4.0 license according to the file `data\LICENSE`.
-We thank Tim Holme from Quantum Scape for providing this dataset.
+We thank Tim Holme from Quantum Scape for providing these data sets.
 
 ## License
 
