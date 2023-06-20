@@ -17,7 +17,7 @@ conda create -n "eis-ml" python=3.9.15 ipython
 conda activate eis-ml
 pip install -r requirements.txt
 ```
-If you are on MacOS you might have to install tensorflw and tsfresh separately/manually fix the installation of subdependdecies etc.
+If you are on MacOS you might have to install TensorFlow and tsfresh separately/manually fix the installation of sub-dependencies etc.
 
 ## Workflow 
 
@@ -63,20 +63,23 @@ We thank Tim Holme from Quantum Scape for providing these data sets.
 
 ## License
 
-The codecode in this repository is made publicly available under the terms of the MIT license as denoted in the `LICENSE` file. 
+The code in this repository is made publicly available under the terms of the MIT license as denoted in the `LICENSE` file. 
 The data in this article is shared under the terms of the CC-BY 4.0 license according to the file `data\LICENSE`.
 
-## Acknowledment/Citation
+## Acknowledgment/Citation
 
-If you use code from this repositroy for your work, please cite: 
+If you use code from this repository for your work, please cite: 
 
-@misc{ECM_classficiation_EIS_23,  
-  author = {Schaeffer, Joachim and Gasper, Paul and Garcia-Tamayo, Esteban and Gasper, Raymond and Adachi, Masaki and Gaviria-Cardona, Juan Pablo and Montoya-Bedoya, Simon and Bhutani, Anoushka and Schiek, Andrew and Goodall, Rhys and Findeisen, Rolf and Braatz, Richard D. and Engelke, Simon},  
-  keywords = {Machine Learning (cs.LG), Materials Science (cond-mat.mtrl-sci), FOS: Computer and information sciences, FOS: Computer and information sciences, FOS: Physical sciences, FOS: Physical sciences, 68T10},  
-  title = {Machine learning benchmarks for the classification of equivalent circuit models from solid-state electrochemical impedance spectra},  
-  note = {arXiv preprint, https://arxiv.org/abs/2302.03362 },  
-  eprint	= {2302.03362},  
-  archiveprefix = {arXiv},  
-  doi = {10.48550/ARXIV.2302.03362},  
-  year = {2023}  
-  }
+
+@article{Schaeffer_2023,
+	author = {Joachim Schaeffer and Paul Gasper and Esteban Garcia-Tamayo and Raymond Gasper and Masaki Adachi and Juan Pablo Gaviria-Cardona and Simon Montoya-Bedoya and Anoushka Bhutani and Andrew Schiek and Rhys Goodall and Rolf Findeisen and Richard D. Braatz and Simon Engelke},
+	doi = { 10.1149/1945-7111/acd8fb },
+	journal = {Journal of The Electrochemical Society},
+	month = {jun},
+	number = {6},
+	pages = {060512},
+	publisher = {IOP Publishing},
+	title = {Machine Learning Benchmarks for the Classification of Equivalent Circuit Models from Electrochemical Impedance Spectra},
+	volume = {170},
+	year = {2023},
+}
