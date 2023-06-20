@@ -72,14 +72,14 @@ If you use code from this repository for your work, please cite:
 
 
 @article{Schaeffer_2023,
-	author = {Joachim Schaeffer and Paul Gasper and Esteban Garcia-Tamayo and Raymond Gasper and Masaki Adachi and Juan Pablo Gaviria-Cardona and Simon Montoya-Bedoya and Anoushka Bhutani and Andrew Schiek and Rhys Goodall and Rolf Findeisen and Richard D. Braatz and Simon Engelke},
-	doi = { 10.1149/1945-7111/acd8fb },
-	journal = {Journal of The Electrochemical Society},
-	month = {jun},
-	number = {6},
-	pages = {060512},
-	publisher = {IOP Publishing},
-	title = {Machine Learning Benchmarks for the Classification of Equivalent Circuit Models from Electrochemical Impedance Spectra},
-	volume = {170},
-	year = {2023},
-}
+	author = {Joachim Schaeffer and Paul Gasper and Esteban Garcia-Tamayo and Raymond Gasper and Masaki Adachi and Juan Pablo Gaviria-Cardona and Simon Montoya-Bedoya and Anoushka Bhutani and Andrew Schiek and Rhys Goodall and Rolf Findeisen and Richard D. Braatz and Simon Engelke},  
+ 	doi = { 10.1149/1945-7111/acd8fb },  
+	journal = {Journal of The Electrochemical Society},  
+	month = {jun},  
+	number = {6},  
+	pages = {060512},  
+	publisher = {IOP Publishing},  
+	title = {Machine Learning Benchmarks for the Classification of Equivalent Circuit Models from Electrochemical Impedance Spectra},  
+	volume = {170},  
+	year = {2023},  
+}  
