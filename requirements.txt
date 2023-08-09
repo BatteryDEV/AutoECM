@@ -1,5 +1,5 @@
 joblib==1.2.0
-keras==2.10.0
+keras==2.11.0
 matplotlib==3.5.1
 numpy==1.21.5
 opencv_python==4.6.0.66
