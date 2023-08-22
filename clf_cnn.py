@@ -34,6 +34,10 @@ from utils import plot_cm, calcualte_classification_report
 # tf.random.set_seed(20)
 # np.random.seed(20)
 
+SEED = 20
+SHUFFLE_TRAIN_VAL = True
+VAL_SPLIT = 0.1
+
 
 def cnn_architecture(
     input_shape: Tuple[int, int], nb_classes: int, adaptive_based_on_val: bool = True
@@ -151,30 +155,30 @@ def main(
     if adaptive_based_on_val:
         train_ds = tf.keras.utils.image_dataset_from_directory(
             f"{input_dir}/train",
-            validation_split=0.1,
+            validation_split=VAL_SPLIT,
             subset="training",
-            seed=20,
+            seed=SEED,
             image_size=input_shape,
             label_mode="categorical",
-            shuffle=True,
+            shuffle=SHUFFLE_TRAIN_VAL,
             color_mode="grayscale",
         )
 
         val_ds = tf.keras.utils.image_dataset_from_directory(
             f"{input_dir}/train",
-            validation_split=0.1,
+            validation_split=VAL_SPLIT,
             subset="validation",
-            seed=20,
+            seed=SEED,
             image_size=input_shape,
             batch_size=64,
             label_mode="categorical",
-            shuffle=False,
+            shuffle=SHUFFLE_TRAIN_VAL,
             color_mode="grayscale",
         )
     else:
         train_ds = tf.keras.utils.image_dataset_from_directory(
             f"{input_dir}/train",
-            seed=42,
+            seed=SEED,
             image_size=input_shape,
             label_mode="categorical",
             shuffle=True,
@@ -186,7 +190,7 @@ def main(
     test_ds = tf.keras.utils.image_dataset_from_directory(
         f"{input_dir}/test",
         validation_split=None,
-        seed=42,
+        seed=SEED,
         image_size=input_shape,
         batch_size=2000,
         label_mode="categorical",
@@ -253,7 +257,7 @@ def calculate_stats_multiple_run(
     test_ds = tf.keras.utils.image_dataset_from_directory(
         f"{input_dir}/test",
         validation_split=None,
-        seed=42,
+        seed=SEED,
         image_size=input_shape,
         batch_size=2000,
         label_mode="categorical",
