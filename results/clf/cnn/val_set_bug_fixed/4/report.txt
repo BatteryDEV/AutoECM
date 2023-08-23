@@ -1,0 +1,15 @@
+                     precision    recall  f1-score   support
+
+           L-R-RCPE     0.4398    0.4818    0.4599       220
+      L-R-RCPE-RCPE     0.1972    0.2019    0.1995       208
+ L-R-RCPE-RCPE-RCPE     0.2233    0.2087    0.2157       230
+             RC-G-G     0.7150    0.6245    0.6667       229
+    RC-RC-RCPE-RCPE     0.5021    0.5307    0.5160       228
+          RCPE-RCPE     0.2339    0.2350    0.2345       217
+     RCPE-RCPE-RCPE     0.1881    0.1681    0.1776       226
+RCPE-RCPE-RCPE-RCPE     0.1845    0.1920    0.1882       224
+              Rs_Ws     0.7059    0.8675    0.7784        83
+
+           accuracy                         0.3560      1865
+          macro avg     0.3766    0.3900    0.3818      1865
+       weighted avg     0.3542    0.3560    0.3541      1865
