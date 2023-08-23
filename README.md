@@ -6,6 +6,9 @@ This repository contains the code to the corresponding publication:
 "Machine learning benchmarks for the classification of equivalent circuit models from solid-state electrochemical impedance spectra"
 http://arxiv.org/abs/2302.03362
 
+There was a minor bug in the splitting method for the validation set that is used for early stopping and learning rate adjustment for the CNN training. If you want to reproduce the results associated with the manuscript please checkout commit `d893efd`.
+The newest commit will yield a slighly higher CNN performance. The ranking of algorithms remains unaffected.
+
 ## Setup
 
 A `requirements.txt` file and, alternatively, a file `environment.yml` is provided to create the `python` environment needed to run this code.
