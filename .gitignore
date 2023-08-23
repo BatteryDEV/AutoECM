@@ -22,6 +22,7 @@
 
 results/clf/cnn/*
 !results/clf/cnn/manuscript/
+!results/clf/cnn/val_set_bug_fixed/
 results/clf/cnn/**/**/*.h5
 
 results/clf_filtered/cnn/*
